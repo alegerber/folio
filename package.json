@@ -1,0 +1,40 @@
+{
+  "name": "pdf-microservice",
+  "version": "1.0.0",
+  "description": "PDF generation microservice using Puppeteer, Fastify, and S3",
+  "main": "dist/local.js",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/local.ts src/lambda.ts --bundle --platform=node --target=node20 --outdir=dist --external:@sparticuz/chromium --format=esm",
+    "dev": "node --watch --import tsx src/local.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src test",
+    "test": "vitest run",
+    "test:cov": "vitest run --coverage"
+  },
+  "dependencies": {
+    "fastify": "^4.28.0",
+    "@fastify/sensible": "^5.6.0",
+    "aws-lambda-fastify": "^2.2.0",
+    "fastify-plugin": "^4.5.0",
+    "puppeteer-core": "^22.0.0",
+    "@sparticuz/chromium": "^123.0.0",
+    "zod": "^3.23.0",
+    "zod-to-json-schema": "^3.23.0",
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/s3-request-presigner": "^3.600.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^20.0.0",
+    "@types/aws-lambda": "^8.10.0",
+    "vitest": "^1.6.0",
+    "@vitest/coverage-v8": "^1.6.0",
+    "esbuild": "^0.21.0",
+    "eslint": "^9.0.0",
+    "@eslint/js": "^9.0.0",
+    "typescript-eslint": "^8.0.0",
+    "pino-pretty": "^11.0.0",
+    "tsx": "^4.0.0"
+  }
+}
