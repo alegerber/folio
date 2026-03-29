@@ -2,7 +2,7 @@
 FROM node:24-slim AS builder
 WORKDIR /app
 COPY package*.json .
-RUN npm ci
+RUN npm install
 COPY tsconfig.json .
 COPY src/ src/
 RUN npm run build
@@ -12,7 +12,7 @@ FROM public.ecr.aws/lambda/nodejs:24
 WORKDIR /var/task
 COPY --from=builder /app/dist ./dist
 COPY package*.json .
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 ENV CHROMIUM_PATH=/var/task/node_modules/@sparticuz/chromium/bin/chromium
 
