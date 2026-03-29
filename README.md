@@ -1,6 +1,6 @@
 # pdf-microservice
 
-HTML-to-PDF generation service built on Fastify 4, headless Chromium (Puppeteer), and AWS S3. Runs as a Docker container locally and as an AWS Lambda container image in production — same image, same binary.
+HTML-to-PDF generation service built on Fastify 5, headless Chromium (Puppeteer), and AWS S3. Runs as a Docker container locally and as an AWS Lambda container image in production — same image, same binary.
 
 ## How it works
 
@@ -76,6 +76,8 @@ curl -s -X POST http://localhost:8080/pdf/generate \
 
 The MinIO console is available at [http://localhost:9001](http://localhost:9001) (user: `minioadmin`, password: `minioadmin`).
 
+Presigned URLs in the response use `http://localhost:9000` so they are directly openable from the host machine.
+
 ## Development without Docker
 
 ```bash
@@ -104,22 +106,33 @@ npm run dev
 | `AWS_REGION` | yes | AWS region |
 | `AWS_ACCESS_KEY_ID` | prod only | IAM credentials (not needed with Lambda execution role) |
 | `AWS_SECRET_ACCESS_KEY` | prod only | IAM credentials |
-| `AWS_ENDPOINT_URL` | local only | MinIO endpoint — e.g. `http://minio:9000` |
+| `AWS_ENDPOINT_URL` | local only | Internal S3/MinIO endpoint — e.g. `http://minio:9000` |
+| `AWS_PUBLIC_ENDPOINT_URL` | local only | Public-facing S3/MinIO endpoint for presigned URLs — e.g. `http://localhost:9000` |
 | `SIGNED_URL_EXPIRY_SECONDS` | no | Presigned URL TTL, default `3600` |
 | `LOG_LEVEL` | no | `trace` `debug` `info` `warn` `error` — default `info` |
+| `PORT` | no | HTTP port for local server, default `8080` |
 
 See [.env.example](.env.example) for a ready-to-copy template.
+
+### `AWS_ENDPOINT_URL` vs `AWS_PUBLIC_ENDPOINT_URL`
+
+Two S3 clients are registered:
+
+- **`s3`** — uses `AWS_ENDPOINT_URL` for uploads. Resolves to the internal Docker network name (`minio`) so the API container can reach MinIO.
+- **`s3Public`** — uses `AWS_PUBLIC_ENDPOINT_URL` for generating presigned URLs. Resolves to `localhost` so the returned URL is reachable from outside Docker.
+
+In production with real S3 neither variable is set and both clients use the default AWS endpoint.
 
 ## Project structure
 
 ```
 src/
   server.ts              # Fastify app factory — no listen(), shared by local + Lambda
-  local.ts               # Docker entry point (listen on 0.0.0.0:8080)
-  lambda.ts              # Lambda handler (aws-lambda-fastify wrapper)
+  local.ts               # Docker / plain Node entry point (listen on 0.0.0.0:PORT)
+  lambda.ts              # Lambda handler — buildApp() at module level for browser reuse
   config/env.ts          # Zod-parsed process.env — exits on missing required vars
   plugins/
-    s3.ts                # S3Client registered as Fastify decorator
+    s3.ts                # Registers s3 (upload) and s3Public (presigning) decorators
     sensible.ts          # @fastify/sensible (httpErrors, assert)
   routes/pdf/
     schema.ts            # Zod schema → JSON Schema for AJV validation
@@ -127,14 +140,31 @@ src/
     index.ts             # Route registration (POST /pdf/generate)
   services/
     pdf/PdfService.ts          # Puppeteer browser lifecycle + PDF generation
-    storage/StorageService.ts  # S3 upload + presigned URL generation
-  types/index.ts         # Shared TypeScript interfaces
+    storage/StorageService.ts  # S3 upload (s3) + presigned URL (s3Public)
+  types/
+    index.ts                   # Shared TypeScript interfaces
+    aws-lambda-fastify.d.ts    # Ambient type declaration for aws-lambda-fastify
 
 test/integration/
   generate.test.ts       # Full route tests via app.inject() — no real browser
 ```
 
+## Stack
+
+| Layer | Package | Version |
+|---|---|---|
+| Framework | Fastify | 5.x |
+| PDF | puppeteer-core + @sparticuz/chromium | 24.x / 143.x |
+| Validation | Zod | 4.x |
+| Storage | @aws-sdk/client-s3 | 3.x |
+| Logging | Pino (Fastify built-in) + pino-pretty | — |
+| Testing | Vitest | 4.x |
+| Build | esbuild | 0.27.x |
+| Runtime | Node.js | 24 |
+
 ## Deployment
+
+### Lambda (default)
 
 The service deploys as a container image to AWS Lambda via GitHub Actions.
 
@@ -146,7 +176,7 @@ Required GitHub secrets: `AWS_ACCOUNT_ID`, `ECR_REPOSITORY`, `LAMBDA_FUNCTION_NA
 
 Authentication uses GitHub Actions OIDC → AWS STS (no long-lived IAM keys stored as secrets).
 
-### Recommended Lambda configuration
+#### Recommended Lambda configuration
 
 | Setting | Value |
 |---|---|
@@ -155,3 +185,4 @@ Authentication uses GitHub Actions OIDC → AWS STS (no long-lived IAM keys stor
 | Ephemeral storage | 1024 MB |
 | Architecture | x86_64 |
 | Package type | Image |
+
