@@ -29,5 +29,5 @@ export type GenerateRequestInput = z.infer<typeof generateRequestSchema>;
 
 // Strip $schema so Fastify's AJV (draft-07) doesn't try to resolve the
 // draft/2020-12 meta-schema that zod v4 emits by default.
-const { $schema: _omit, ...generateRequestJsonSchema } = z.toJSONSchema(generateRequestSchema);
+const { $schema: _$schema, ...generateRequestJsonSchema } = z.toJSONSchema(generateRequestSchema);
 export { generateRequestJsonSchema };
