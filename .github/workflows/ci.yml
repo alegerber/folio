@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-      - run: npm ci
+      - run: npm install
       - run: npm run typecheck
 
   lint:
@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-      - run: npm ci
+      - run: npm install
       - run: npm run lint
 
   test:
@@ -40,7 +40,7 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-      - run: npm ci
+      - run: npm install
       - run: npm run test:cov
 
   docker-build-check:
