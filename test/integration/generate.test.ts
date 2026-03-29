@@ -32,6 +32,7 @@ vi.mock('../../src/services/storage/StorageService.js', () => ({
 vi.mock('../../src/plugins/s3.js', () => ({
   s3Plugin: async (fastify: FastifyInstance) => {
     fastify.decorate('s3', {});
+    fastify.decorate('s3Public', {});
   },
 }));
 

@@ -6,6 +6,7 @@ const envSchema = z.object({
   AWS_ACCESS_KEY_ID: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
   AWS_ENDPOINT_URL: z.string().url().optional(),
+  AWS_PUBLIC_ENDPOINT_URL: z.string().url().optional(),
   SIGNED_URL_EXPIRY_SECONDS: z.coerce.number().int().positive().default(3600),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error']).default('info'),
   PORT: z.coerce.number().int().positive().default(8080),

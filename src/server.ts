@@ -23,7 +23,7 @@ export async function buildApp() {
   await fastify.register(s3Plugin);
   await fastify.register(pdfRoutes, {
     pdfService,
-    storageService: new StorageService(fastify.s3),
+    storageService: new StorageService(fastify.s3, fastify.s3Public),
   });
 
   fastify.addHook('onReady', async () => {

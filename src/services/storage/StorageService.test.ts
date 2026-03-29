@@ -28,11 +28,13 @@ vi.mock('../../config/env.js', () => ({
 describe('StorageService', () => {
   let storageService: StorageService;
   let mockS3Client: S3Client;
+  let mockS3PublicClient: S3Client;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockS3Client = new S3Client({ region: 'us-east-1' });
-    storageService = new StorageService(mockS3Client);
+    mockS3PublicClient = new S3Client({ region: 'us-east-1' });
+    storageService = new StorageService(mockS3Client, mockS3PublicClient);
   });
 
   it('uploads PDF and returns a presigned URL', async () => {
