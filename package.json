@@ -3,9 +3,8 @@
   "version": "1.0.0",
   "description": "PDF generation microservice using Puppeteer, Fastify, and S3",
   "main": "dist/local.js",
-  "type": "module",
   "scripts": {
-    "build": "esbuild src/local.ts src/lambda.ts --bundle --platform=node --target=node20 --outdir=dist --external:@sparticuz/chromium --format=esm",
+    "build": "esbuild src/local.ts src/lambda.ts --bundle --platform=node --target=node20 --outdir=dist --external:@sparticuz/chromium --format=cjs",
     "dev": "node --watch --import tsx src/local.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src test",
