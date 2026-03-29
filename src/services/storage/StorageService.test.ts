@@ -7,9 +7,9 @@ vi.mock('@aws-sdk/client-s3', async () => {
   const actual = await vi.importActual('@aws-sdk/client-s3');
   return {
     ...actual,
-    S3Client: vi.fn().mockImplementation(() => ({
-      send: vi.fn().mockResolvedValue({}),
-    })),
+    S3Client: class {
+      send = vi.fn().mockResolvedValue({});
+    },
   };
 });
 

@@ -14,18 +14,18 @@ vi.mock('../../src/config/env.js', () => ({
 
 // Mock PdfService - no real browser needed
 vi.mock('../../src/services/pdf/PdfService.js', () => ({
-  PdfService: vi.fn().mockImplementation(() => ({
-    getBrowser: vi.fn().mockResolvedValue({}),
-    generate: vi.fn().mockResolvedValue(Buffer.from('%PDF-1.4 test')),
-    close: vi.fn().mockResolvedValue(undefined),
-  })),
+  PdfService: class {
+    getBrowser = vi.fn().mockResolvedValue({});
+    generate = vi.fn().mockResolvedValue(Buffer.from('%PDF-1.4 test'));
+    close = vi.fn().mockResolvedValue(undefined);
+  },
 }));
 
 // Mock StorageService
 vi.mock('../../src/services/storage/StorageService.js', () => ({
-  StorageService: vi.fn().mockImplementation(() => ({
-    upload: vi.fn().mockResolvedValue('https://s3.amazonaws.com/test-bucket/pdfs/test.pdf?signed=true'),
-  })),
+  StorageService: class {
+    upload = vi.fn().mockResolvedValue('https://s3.amazonaws.com/test-bucket/pdfs/test.pdf?signed=true');
+  },
 }));
 
 // Mock s3Plugin

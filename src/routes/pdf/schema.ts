@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 
 export const generateRequestSchema = z.object({
   html: z.string().min(1, 'html is required'),
@@ -28,7 +27,7 @@ export const generateRequestSchema = z.object({
 
 export type GenerateRequestInput = z.infer<typeof generateRequestSchema>;
 
-export const generateRequestJsonSchema = zodToJsonSchema(generateRequestSchema, {
-  name: 'GenerateRequest',
-  target: 'jsonSchema7',
-});
+// Strip $schema so Fastify's AJV (draft-07) doesn't try to resolve the
+// draft/2020-12 meta-schema that zod v4 emits by default.
+const { $schema: _omit, ...generateRequestJsonSchema } = z.toJSONSchema(generateRequestSchema);
+export { generateRequestJsonSchema };

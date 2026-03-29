@@ -23,7 +23,7 @@ export class PdfService {
     this.browser = await puppeteer.default.launch({
       args: chromium.default.args,
       executablePath: await chromium.default.executablePath(),
-      headless: chromium.default.headless as boolean | 'shell',
+      headless: chromium.default.headless as boolean,
     });
 
     return this.browser;

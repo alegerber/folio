@@ -1,5 +1,5 @@
 # Stage 1: build
-FROM node:20-slim AS builder
+FROM node:24-slim AS builder
 WORKDIR /app
 COPY package*.json .
 RUN npm ci
@@ -8,7 +8,7 @@ COPY src/ src/
 RUN npm run build
 
 # Stage 2: production (Lambda base image includes the Runtime Interface Emulator)
-FROM public.ecr.aws/lambda/nodejs:20
+FROM public.ecr.aws/lambda/nodejs:24
 WORKDIR /var/task
 COPY --from=builder /app/dist ./dist
 COPY package*.json .
