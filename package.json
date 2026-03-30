@@ -2,6 +2,7 @@
   "name": "pdf-microservice",
   "version": "1.0.0",
   "description": "PDF generation microservice using Puppeteer, Fastify, and S3",
+  "license": "MIT",
   "main": "dist/local.js",
   "scripts": {
     "build": "esbuild src/local.ts src/lambda.ts --bundle --platform=node --target=node24 --outdir=dist --external:@sparticuz/chromium --external:pino --external:pino-pretty --format=cjs",
