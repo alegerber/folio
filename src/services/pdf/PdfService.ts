@@ -21,7 +21,7 @@ export class PdfService {
     const chromium = await import('@sparticuz/chromium');
 
     this.browser = await puppeteer.default.launch({
-      args: chromium.default.args,
+      args: chromium.default.args.filter((arg: string) => !arg.startsWith('--headless')),
       executablePath: await chromium.default.executablePath(),
       headless: true,
     });
