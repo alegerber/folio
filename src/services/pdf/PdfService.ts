@@ -21,7 +21,7 @@ export class PdfService {
     const chromium = await import('@sparticuz/chromium');
 
     this.browser = await puppeteer.default.launch({
-      args: chromium.default.args,
+      args: chromium.default.args.filter((arg: string) => !arg.startsWith('--headless')),
       executablePath: await chromium.default.executablePath(),
       headless: true,
     });
@@ -40,6 +40,8 @@ export class PdfService {
     try {
       await page.setContent(html, { waitUntil: 'networkidle0' });
 
+      const hasHeaderFooter = !!(options?.headerTemplate || options?.footerTemplate);
+
       const pdfOptions: Parameters<typeof page.pdf>[0] = {
         printBackground: options?.printBackground ?? false,
         scale: options?.scale,
@@ -51,6 +53,9 @@ export class PdfService {
               left: options.margin.left,
             }
           : undefined,
+        displayHeaderFooter: hasHeaderFooter,
+        headerTemplate: options?.headerTemplate ?? '',
+        footerTemplate: options?.footerTemplate ?? '',
       };
 
       // Apply paper size

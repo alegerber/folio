@@ -14,6 +14,8 @@ export interface PdfOptions {
   margin?: MarginOptions;
   scale?: number;
   printBackground?: boolean;
+  headerTemplate?: string;
+  footerTemplate?: string;
 }
 
 export interface GenerateRequest {
