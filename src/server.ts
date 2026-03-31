@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import { env } from './config/env.js';
 import { s3Plugin } from './plugins/s3.js';
 import { sensiblePlugin } from './plugins/sensible.js';
+import { healthRoutes } from './routes/health/index.js';
 import { pdfRoutes } from './routes/pdf/index.js';
 import { PdfService } from './services/pdf/PdfService.js';
 import { StorageService } from './services/storage/StorageService.js';
@@ -21,6 +22,7 @@ export async function buildApp() {
 
   await fastify.register(sensiblePlugin);
   await fastify.register(s3Plugin);
+  await fastify.register(healthRoutes);
   await fastify.register(pdfRoutes, {
     pdfService,
     storageService: new StorageService(fastify.s3, fastify.s3Public),
