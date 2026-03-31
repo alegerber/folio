@@ -20,6 +20,8 @@ export const generateRequestSchema = z.object({
         .optional(),
       scale: z.number().min(0.1).max(2.0).optional(),
       printBackground: z.boolean().optional(),
+      headerTemplate: z.string().optional(),
+      footerTemplate: z.string().optional(),
     })
     .optional(),
   stream: z.boolean().optional().default(false),

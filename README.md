@@ -27,7 +27,9 @@ The Chromium browser is launched once at startup and reused across requests. On 
   "options": {
     "margin": { "top": "20mm", "right": "15mm", "bottom": "20mm", "left": "15mm" },
     "scale": 1.0,
-    "printBackground": false
+    "printBackground": false,
+    "headerTemplate": "<div style=\"font-size:10px;text-align:center;\">My Header</div>",
+    "footerTemplate": "<div style=\"font-size:10px;text-align:right;\">Page <span class=\"pageNumber\"></span> of <span class=\"totalPages\"></span></div>"
   },
   "stream": false
 }
@@ -41,6 +43,8 @@ The Chromium browser is launched once at startup and reused across requests. On 
 | `options.margin` | object | no | `top`, `right`, `bottom`, `left` in CSS units |
 | `options.scale` | number | no | 0.1–2.0 |
 | `options.printBackground` | boolean | no | Include CSS backgrounds (default `false`) |
+| `options.headerTemplate` | string | no | HTML template for the page header; enables `displayHeaderFooter` automatically |
+| `options.footerTemplate` | string | no | HTML template for the page footer; supports `<span class="pageNumber">` and `<span class="totalPages">` |
 | `stream` | boolean | no | `true` = binary response, `false` = S3 URL (default) |
 
 **Response — S3 URL (`stream: false`)**
