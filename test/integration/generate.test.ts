@@ -132,4 +132,35 @@ describe('POST /pdf/generate', () => {
 
     expect(response.statusCode).toBe(400);
   });
+
+  it('accepts headerTemplate and footerTemplate', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/pdf/generate',
+      payload: {
+        html: '<html><body><h1>Test</h1></body></html>',
+        options: {
+          headerTemplate: '<div style="font-size:10px;text-align:center;">Header</div>',
+          footerTemplate: '<div style="font-size:10px;text-align:center;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>',
+        },
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+  });
+
+  it('accepts headerTemplate without footerTemplate', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/pdf/generate',
+      payload: {
+        html: '<html><body></body></html>',
+        options: {
+          headerTemplate: '<div style="font-size:8px;">My Header</div>',
+        },
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+  });
 });
