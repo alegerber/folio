@@ -11,9 +11,9 @@ export function createGenerateHandler(
     request: FastifyRequest<{ Body: GenerateRequestInput }>,
     reply: FastifyReply,
   ) {
-    const { html, paper, options, stream } = request.body;
+    const { html, css, paper, options, stream } = request.body;
 
-    const pdfBuffer = await pdfService.generate(html, paper, options);
+    const pdfBuffer = await pdfService.generate(html, css, paper, options);
 
     if (stream) {
       return reply
