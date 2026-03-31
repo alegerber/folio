@@ -33,3 +33,20 @@ export type GenerateRequestInput = z.infer<typeof generateRequestSchema>;
 // draft/2020-12 meta-schema that zod v4 emits by default.
 const { $schema: _$schema, ...generateRequestJsonSchema } = z.toJSONSchema(generateRequestSchema);
 export { generateRequestJsonSchema };
+
+export const pdfIdParamsSchema = z.object({
+  id: z.string().uuid(),
+});
+export type PdfIdParams = z.infer<typeof pdfIdParamsSchema>;
+
+const { $schema: _s1, ...pdfIdParamsJsonSchema } = z.toJSONSchema(pdfIdParamsSchema);
+export { pdfIdParamsJsonSchema };
+
+export const mergeRequestSchema = z.object({
+  ids: z.array(z.string().uuid()).min(2),
+  stream: z.boolean().optional().default(false),
+});
+export type MergeRequestInput = z.infer<typeof mergeRequestSchema>;
+
+const { $schema: _s2, ...mergeRequestJsonSchema } = z.toJSONSchema(mergeRequestSchema);
+export { mergeRequestJsonSchema };
