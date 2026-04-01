@@ -24,7 +24,7 @@ export const pdfRoutes: FastifyPluginAsync<PdfRouteOptions> = async (
   fastify,
   { pdfService, storageService, metricsService },
 ) => {
-  fastify.post('/pdf/generate', {‚
+  fastify.post('/pdf/generate', {
     schema: {
       body: generateRequestJsonSchema,
     },
