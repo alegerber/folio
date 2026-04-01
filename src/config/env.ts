@@ -10,6 +10,7 @@ const envSchema = z.object({
   SIGNED_URL_EXPIRY_SECONDS: z.coerce.number().int().positive().default(3600),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error']).default('info'),
   PORT: z.coerce.number().int().positive().default(8080),
+  API_KEY: z.string().min(32).optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

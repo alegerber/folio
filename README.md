@@ -218,6 +218,23 @@ npm run dev
 | `npm run lint` | ESLint |
 | `npm run build` | Bundle with esbuild to `dist/` |
 
+## Authentication
+
+All routes can be protected with a static API key passed in the `X-Api-Key` request header.
+
+- Set the `API_KEY` environment variable (minimum 32 characters) to enable authentication.
+- When `API_KEY` is not set, authentication is skipped (useful for local development).
+- Unauthenticated requests receive a `401 Unauthorized` response before reaching any handler.
+- Key comparison uses constant-time (`crypto.timingSafeEqual`) to prevent timing attacks.
+
+```bash
+# Example authenticated request
+curl -X POST http://localhost:8080/pdf/generate \
+  -H "Content-Type: application/json" \
+  -H "X-Api-Key: your-secret-key-here" \
+  -d '{"html": "<html><body><h1>Hello</h1></body></html>"}'
+```
+
 ## Environment variables
 
 | Variable | Required | Description |
@@ -231,6 +248,7 @@ npm run dev
 | `SIGNED_URL_EXPIRY_SECONDS` | no | Presigned URL TTL, default `3600` |
 | `LOG_LEVEL` | no | `trace` `debug` `info` `warn` `error` — default `info` |
 | `PORT` | no | HTTP port for local server, default `8080` |
+| `API_KEY` | recommended in prod | Static API key for request authentication (min 32 chars). Omit to disable auth. |
 
 See [.env.example](.env.example) for a ready-to-copy template.
 
@@ -252,6 +270,7 @@ src/
   lambda.ts              # Lambda handler — buildApp() at module level for browser reuse
   config/env.ts          # Zod-parsed process.env — exits on missing required vars
   plugins/
+    auth.ts              # API key authentication (X-Api-Key header, timing-safe comparison)
     s3.ts                # Registers s3 (upload) and s3Public (presigning) decorators
     sensible.ts          # @fastify/sensible (httpErrors, assert)
   routes/

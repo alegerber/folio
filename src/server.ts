@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import { env } from './config/env.js';
+import { authPlugin } from './plugins/auth.js';
 import { s3Plugin } from './plugins/s3.js';
 import { sensiblePlugin } from './plugins/sensible.js';
 import { healthRoutes } from './routes/health/index.js';
@@ -24,6 +25,7 @@ export async function buildApp() {
   const metricsService = new MetricsService();
 
   await fastify.register(sensiblePlugin);
+  await fastify.register(authPlugin);
   await fastify.register(s3Plugin);
   await fastify.register(healthRoutes);
   await fastify.register(pdfRoutes, {
