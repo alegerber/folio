@@ -29,10 +29,14 @@ src/
   plugins/
     s3.ts                # Registers s3 (upload) + s3Public (presigning) as Fastify decorators
     sensible.ts          # @fastify/sensible
-  routes/pdf/
-    schema.ts            # Zod schema; z.toJSONSchema() with $schema stripped for AJV compat
-    handler.ts           # generate PDF → stream bytes or upload to S3 + return presigned URL
-    index.ts             # Registers POST /pdf/generate
+  routes/
+    health/
+      handler.ts         # GET /health → { status: "ok" }
+      index.ts           # Registers GET /health
+    pdf/
+      schema.ts          # Zod schema; z.toJSONSchema() with $schema stripped for AJV compat
+      handler.ts         # generate PDF → stream bytes or upload to S3 + return presigned URL
+      index.ts           # Registers POST /pdf/generate
   services/
     pdf/PdfService.ts          # Puppeteer browser lifecycle + PDF generation
     storage/StorageService.ts  # S3 upload (s3 client) + presigned URL (s3Public client)
@@ -42,6 +46,21 @@ src/
 ```
 
 ## API
+
+### GET /health
+
+Returns service liveness. Also responds to `HEAD /health`.
+
+**Response:**
+```json
+{ "status": "ok" }
+```
+
+Use for load balancer health checks or Lambda function URL probes. No auth required.
+
+**Files:** `src/routes/health/index.ts`, `src/routes/health/handler.ts`
+
+---
 
 ### POST /pdf/generate
 
@@ -137,7 +156,7 @@ Planned features are documented in `.plans/`:
 | `url-rendering.md` | Render a URL instead of raw HTML (includes SSRF notes) |
 | `async-webhook.md` | `202 Accepted` + webhook callback for slow jobs |
 | `api-key-auth.md` | `X-Api-Key` header auth with timing-safe comparison |
-| `observability.md` | `/health`, `/metrics`, PDF generation histograms |
+| `observability.md` | `/metrics`, PDF generation histograms (`/health` already implemented) |
 | `additional-routes.md` | `GET /pdf/:id`, `DELETE /pdf/:id`, `POST /pdf/merge` |
 | `queue-based-scaling.md` | SQS / BullMQ decoupled worker tier |
 | `node-server-deployment.md` | ECS Fargate / Fly.io plain Node server deployment |

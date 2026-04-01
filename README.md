@@ -13,6 +13,20 @@ The Chromium browser is launched once at startup and reused across requests. On 
 
 ## API
 
+### `GET /health`
+
+Returns service liveness. Also responds to `HEAD /health` (no body).
+
+**Response**
+
+```json
+{ "status": "ok" }
+```
+
+Use this as the target for load balancer health checks or Lambda function URL probes.
+
+---
+
 ### `POST /pdf/generate`
 
 **Request**
@@ -27,7 +41,9 @@ The Chromium browser is launched once at startup and reused across requests. On 
   "options": {
     "margin": { "top": "20mm", "right": "15mm", "bottom": "20mm", "left": "15mm" },
     "scale": 1.0,
-    "printBackground": false
+    "printBackground": false,
+    "headerTemplate": "<div style=\"font-size:10px;text-align:center;\">My Header</div>",
+    "footerTemplate": "<div style=\"font-size:10px;text-align:right;\">Page <span class=\"pageNumber\"></span> of <span class=\"totalPages\"></span></div>"
   },
   "stream": false
 }
@@ -41,6 +57,8 @@ The Chromium browser is launched once at startup and reused across requests. On 
 | `options.margin` | object | no | `top`, `right`, `bottom`, `left` in CSS units |
 | `options.scale` | number | no | 0.1–2.0 |
 | `options.printBackground` | boolean | no | Include CSS backgrounds (default `false`) |
+| `options.headerTemplate` | string | no | HTML template for the page header; enables `displayHeaderFooter` automatically |
+| `options.footerTemplate` | string | no | HTML template for the page footer; supports `<span class="pageNumber">` and `<span class="totalPages">` |
 | `stream` | boolean | no | `true` = binary response, `false` = S3 URL (default) |
 
 **Response — S3 URL (`stream: false`)**
@@ -134,10 +152,14 @@ src/
   plugins/
     s3.ts                # Registers s3 (upload) and s3Public (presigning) decorators
     sensible.ts          # @fastify/sensible (httpErrors, assert)
-  routes/pdf/
-    schema.ts            # Zod schema → JSON Schema for AJV validation
-    handler.ts           # Orchestration: generate PDF → stream or upload to S3
-    index.ts             # Route registration (POST /pdf/generate)
+  routes/
+    health/
+      handler.ts         # GET /health → { status: "ok" }
+      index.ts           # Route registration (GET /health)
+    pdf/
+      schema.ts          # Zod schema → JSON Schema for AJV validation
+      handler.ts         # Orchestration: generate PDF → stream or upload to S3
+      index.ts           # Route registration (POST /pdf/generate)
   services/
     pdf/PdfService.ts          # Puppeteer browser lifecycle + PDF generation
     storage/StorageService.ts  # S3 upload (s3) + presigned URL (s3Public)
