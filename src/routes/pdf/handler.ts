@@ -13,12 +13,12 @@ export function createGenerateHandler(
     request: FastifyRequest<{ Body: GenerateRequestInput }>,
     reply: FastifyReply,
   ) {
-    const { html, paper, options, stream } = request.body;
-
+    const { html, css, paper, options, stream } = request.body;
+    
     const start = Date.now();
     let pdfBuffer: Buffer;
     try {
-      pdfBuffer = await pdfService.generate(html, paper, options);
+      pdfBuffer = await pdfService.generate(html, css, paper, options);
     } catch (err) {
       metricsService.recordError();
       throw err;

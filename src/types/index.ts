@@ -20,6 +20,7 @@ export interface PdfOptions {
 
 export interface GenerateRequest {
   html: string;
+  css?: string;
   paper?: PaperOptions;
   options?: PdfOptions;
   stream?: boolean;

@@ -66,6 +66,7 @@ Metrics are in-memory and reset on process restart. Scrape with Prometheus or an
 ```json
 {
   "html": "<html><body><h1>Hello</h1></body></html>",
+  "css": "body { font-family: Arial, sans-serif; }",
   "paper": {
     "size": "A4",
     "orientation": "portrait"
@@ -84,6 +85,7 @@ Metrics are in-memory and reset on process restart. Scrape with Prometheus or an
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `html` | string | yes | HTML to render |
+| `css` | string | no | Extra CSS injected into the page after the HTML is set |
 | `paper.size` | string | no | `A4`, `A3`, `Letter`, `Legal`, `Tabloid` |
 | `paper.orientation` | string | no | `portrait` or `landscape` |
 | `options.margin` | object | no | `top`, `right`, `bottom`, `left` in CSS units |

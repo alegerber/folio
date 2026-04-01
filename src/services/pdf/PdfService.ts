@@ -31,6 +31,7 @@ export class PdfService {
 
   async generate(
     html: string,
+    css?: string,
     paper?: PaperOptions,
     options?: PdfOptions,
   ): Promise<Buffer> {
@@ -39,6 +40,10 @@ export class PdfService {
 
     try {
       await page.setContent(html, { waitUntil: 'networkidle0' });
+
+      if (css) {
+        await page.addStyleTag({ content: css });
+      }
 
       const hasHeaderFooter = !!(options?.headerTemplate || options?.footerTemplate);
 
