@@ -1,9 +1,17 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { PDFDocument } from 'pdf-lib';
-import type { GenerateRequestInput, PdfIdParams, MergeRequestInput } from './schema.js';
+import type {
+  GenerateRequestInput,
+  PdfIdParams,
+  MergeRequestInput,
+  SplitRequestInput,
+  CompressRequestInput,
+  PdfARequestInput,
+} from './schema.js';
 import type { PdfService } from '../../services/pdf/PdfService.js';
 import type { StorageService } from '../../services/storage/StorageService.js';
 import type { MetricsService } from '../../services/metrics/MetricsService.js';
+import type { PdfOperationsService } from '../../services/pdf/PdfOperationsService.js';
 
 export function createGetHandler(storageService: StorageService) {
   return async function getHandler(
@@ -52,6 +60,63 @@ export function createMergeHandler(storageService: StorageService) {
     }
 
     const url = await storageService.upload(mergedBuffer);
+    return reply.send({ statusCode: 200, data: { url } });
+  };
+}
+
+export function createSplitHandler(storageService: StorageService, opsService: PdfOperationsService) {
+  return async function splitHandler(
+    request: FastifyRequest<{ Body: SplitRequestInput }>,
+    reply: FastifyReply,
+  ) {
+    const { id, pages, stream } = request.body;
+    const sourceBytes = await storageService.download(id);
+    const resultBuffer = await opsService.split(sourceBytes, pages);
+    if (stream) {
+      return reply
+        .header('Content-Type', 'application/pdf')
+        .header('Content-Disposition', 'attachment; filename="split.pdf"')
+        .send(resultBuffer);
+    }
+    const url = await storageService.upload(resultBuffer);
+    return reply.send({ statusCode: 200, data: { url } });
+  };
+}
+
+export function createCompressHandler(storageService: StorageService, opsService: PdfOperationsService) {
+  return async function compressHandler(
+    request: FastifyRequest<{ Body: CompressRequestInput }>,
+    reply: FastifyReply,
+  ) {
+    const { id, stream } = request.body;
+    const sourceBytes = await storageService.download(id);
+    const resultBuffer = await opsService.compress(sourceBytes);
+    if (stream) {
+      return reply
+        .header('Content-Type', 'application/pdf')
+        .header('Content-Disposition', 'attachment; filename="compressed.pdf"')
+        .send(resultBuffer);
+    }
+    const url = await storageService.upload(resultBuffer);
+    return reply.send({ statusCode: 200, data: { url } });
+  };
+}
+
+export function createPdfAHandler(storageService: StorageService, opsService: PdfOperationsService) {
+  return async function pdfAHandler(
+    request: FastifyRequest<{ Body: PdfARequestInput }>,
+    reply: FastifyReply,
+  ) {
+    const { id, conformance, stream } = request.body;
+    const sourceBytes = await storageService.download(id);
+    const resultBuffer = await opsService.convertToPdfA(sourceBytes, conformance);
+    if (stream) {
+      return reply
+        .header('Content-Type', 'application/pdf')
+        .header('Content-Disposition', 'attachment; filename="pdfa.pdf"')
+        .send(resultBuffer);
+    }
+    const url = await storageService.upload(resultBuffer);
     return reply.send({ statusCode: 200, data: { url } });
   };
 }
