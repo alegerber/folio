@@ -28,6 +28,7 @@ src/
   lambda.ts              # Lambda handler — buildApp() called via promise at module level
   config/env.ts          # Zod-parsed process.env, process.exit(1) on missing required vars
   plugins/
+    auth.ts              # API key auth (X-Api-Key header, timing-safe comparison); skipped when API_KEY unset
     s3.ts                # Registers s3 (upload) + s3Public (presigning) as Fastify decorators
     sensible.ts          # @fastify/sensible
   routes/
@@ -48,6 +49,12 @@ src/
     index.ts                   # GenerateRequest, PaperOptions, PdfOptions, GenerateResponse
     aws-lambda-fastify.d.ts    # Ambient declaration for aws-lambda-fastify (no types shipped)
 ```
+
+## Authentication
+
+All routes are protected by a static API key when the `API_KEY` environment variable is set (min 32 chars). Clients must pass the key in the `X-Api-Key` request header. Requests without a valid key receive `401 Unauthorized`. When `API_KEY` is unset, auth is skipped (local dev). Comparison uses `crypto.timingSafeEqual` to prevent timing attacks.
+
+**Files:** `src/plugins/auth.ts`, `src/plugins/auth.test.ts`, `test/integration/auth.test.ts`
 
 ## API
 
@@ -216,6 +223,7 @@ npm run build
 | `SIGNED_URL_EXPIRY_SECONDS` | no | Default: `3600` |
 | `LOG_LEVEL` | no | Default: `info` |
 | `PORT` | no | Default: `8080` |
+| `API_KEY` | recommended in prod | Static API key (min 32 chars). Omit to disable auth. |
 
 ## Testing Strategy
 
@@ -233,7 +241,7 @@ Planned features are documented in `.plans/`:
 | `css-injection.md` | Inject extra CSS before rendering | Implemented |
 | `url-rendering.md` | Render a URL instead of raw HTML (includes SSRF notes) | Planned |
 | `async-webhook.md` | `202 Accepted` + webhook callback for slow jobs | Planned |
-| `api-key-auth.md` | `X-Api-Key` header auth with timing-safe comparison | Planned |
+| `api-key-auth.md` | `X-Api-Key` header auth with timing-safe comparison | Implemented |
 | `observability.md` | `/health`, `/metrics`, PDF generation histograms | Implemented |
 | `additional-routes.md` | `GET /pdf/:id`, `DELETE /pdf/:id`, `POST /pdf/merge` | Implemented |
 | `queue-based-scaling.md` | SQS / BullMQ decoupled worker tier | Planned |
