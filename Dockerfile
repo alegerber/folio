@@ -1,7 +1,7 @@
 # Stage 1: build
 FROM node:24-slim AS builder
 WORKDIR /app
-COPY package*.json .
+COPY package*.json ./
 RUN npm install
 COPY tsconfig.json .
 COPY src/ src/
@@ -32,7 +32,7 @@ RUN dnf install -y \
     && dnf clean all
 
 COPY --from=builder /app/dist ./dist
-COPY package*.json .
+COPY package*.json ./
 RUN npm install --omit=dev
 
 ENV CHROMIUM_PATH=/var/task/node_modules/@sparticuz/chromium/bin/chromium

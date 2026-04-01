@@ -9,68 +9,58 @@ permissions:
   contents: read
 
 jobs:
-  build-and-push:
-    name: Build and Push to ECR
+  deploy:
+    name: SAM Deploy
     runs-on: ubuntu-latest
     outputs:
-      image-uri: ${{ steps.build.outputs.image-uri }}
+      api-url: ${{ steps.api-url.outputs.url }}
+
     steps:
       - uses: actions/checkout@v4
 
+      - uses: aws-actions/setup-sam@v2
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-ecr
-          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-deploy
+          aws-region: eu-central-1
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+      - name: SAM build
+        run: sam build
 
-      - name: Build and push Docker image
-        id: build
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-          IMAGE_TAG: ${{ github.sha }}
+      - name: SAM deploy
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          echo "image-uri=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          sam deploy \
+            --stack-name folio \
+            --image-repositories "FolioFunction=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/${{ secrets.ECR_REPOSITORY }}" \
+            --s3-bucket "${{ secrets.SAM_ARTIFACT_BUCKET }}" \
+            --region eu-central-1 \
+            --capabilities CAPABILITY_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              "S3BucketName=${{ secrets.S3_BUCKET_NAME }}" \
+              "ApiKey=${{ secrets.API_KEY }}"
 
-  deploy:
-    name: Deploy to Lambda
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-lambda
-          aws-region: us-east-1
-
-      - name: Update Lambda function
+      - name: Get API URL
+        id: api-url
         run: |
-          aws lambda update-function-code \
-            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
-            --image-uri ${{ needs.build-and-push.outputs.image-uri }}
-
-      - name: Wait for Lambda update
-        run: |
-          aws lambda wait function-updated \
-            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }}
+          URL=$(aws cloudformation describe-stacks \
+            --stack-name folio \
+            --region eu-central-1 \
+            --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
+            --output text)
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
 
   smoke-test:
     name: Smoke Test
     needs: deploy
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Run smoke test
-        run: |
-          RESPONSE=$(curl -s -X POST ${{ secrets.API_GATEWAY_URL }}/pdf/generate \
-            -H "Content-Type: application/json" \
-            -d '{"html": "<html><body><h1>Smoke Test</h1></body></html>"}')
-          echo "Response: $RESPONSE"
-          echo $RESPONSE | jq -e '.statusCode == 200 and (.data.url | startswith("https://"))'
+        run: ./scripts/smoke-test.sh "${{ needs.deploy.outputs.api-url }}"
+        env:
+          API_KEY: ${{ secrets.API_KEY }}

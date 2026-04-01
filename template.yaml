@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: folio — PDF microservice (Lambda + API Gateway)
+
+# ── Parameters ────────────────────────────────────────────────────────────────
+
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: Existing S3 bucket used for PDF storage
+
+  ApiKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+    Description: >
+      Optional API key for x-api-key authentication (min 32 chars).
+      Leave blank to disable authentication.
+
+  LogLevel:
+    Type: String
+    Default: info
+    AllowedValues: [trace, debug, info, warn, error]
+
+  SignedUrlExpirySeconds:
+    Type: Number
+    Default: 3600
+
+# ── Conditions ────────────────────────────────────────────────────────────────
+
+Conditions:
+  HasApiKey: !Not [!Equals [!Ref ApiKey, ""]]
+
+# ── Globals ───────────────────────────────────────────────────────────────────
+
+Globals:
+  Function:
+    MemorySize: 2048
+    Timeout: 120
+    Architectures: [x86_64]
+    Environment:
+      Variables:
+        S3_BUCKET:                  !Ref S3BucketName
+        AWS_REGION:                 !Ref AWS::Region
+        GHOSTSCRIPT_PATH:           /usr/bin/gs
+        LOG_LEVEL:                  !Ref LogLevel
+        SIGNED_URL_EXPIRY_SECONDS:  !Ref SignedUrlExpirySeconds
+        API_KEY:                    !If [HasApiKey, !Ref ApiKey, !Ref AWS::NoValue]
+
+# ── Resources ─────────────────────────────────────────────────────────────────
+
+Resources:
+  FolioFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      DockerTag: latest
+      DockerContext: .
+      Dockerfile: Dockerfile
+    Properties:
+      PackageType: Image
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref S3BucketName
+      Events:
+        # Catch-all proxy route — forwards every path/method to Fastify
+        Proxy:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+        Root:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: ANY
+
+# ── Outputs ───────────────────────────────────────────────────────────────────
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
