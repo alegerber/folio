@@ -42,7 +42,6 @@ Globals:
     Environment:
       Variables:
         S3_BUCKET:                  !Ref S3BucketName
-        AWS_REGION:                 !Ref AWS::Region
         GHOSTSCRIPT_PATH:           /usr/bin/gs
         LOG_LEVEL:                  !Ref LogLevel
         SIGNED_URL_EXPIRY_SECONDS:  !Ref SignedUrlExpirySeconds
