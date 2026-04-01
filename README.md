@@ -27,6 +27,38 @@ Use this as the target for load balancer health checks or Lambda function URL pr
 
 ---
 
+### `GET /metrics`
+
+Returns Prometheus-format metrics for the PDF generation service.
+
+**Response**
+
+```
+Content-Type: text/plain; version=0.0.4; charset=utf-8
+
+# HELP pdf_generation_duration_ms Duration of PDF generation in milliseconds
+# TYPE pdf_generation_duration_ms histogram
+pdf_generation_duration_ms_bucket{le="100"} 0
+...
+# HELP pdf_size_bytes Size of generated PDF in bytes
+# TYPE pdf_size_bytes histogram
+...
+# HELP pdf_generation_requests_total Total number of PDF generation requests
+# TYPE pdf_generation_requests_total counter
+pdf_generation_requests_total{status="success"} 42
+pdf_generation_requests_total{status="error"} 1
+```
+
+| Metric | Type | Description |
+|---|---|---|
+| `pdf_generation_duration_ms` | histogram | PDF generation wall-clock time; buckets at 100, 250, 500, 1000, 2500, 5000, 10000 ms |
+| `pdf_size_bytes` | histogram | Generated PDF file size; buckets at 10 KB, 50 KB, 100 KB, 500 KB, 1 MB, 5 MB, 10 MB |
+| `pdf_generation_requests_total` | counter | Request count labelled by `status="success"` or `status="error"` |
+
+Metrics are in-memory and reset on process restart. Scrape with Prometheus or any compatible collector.
+
+---
+
 ### `POST /pdf/generate`
 
 **Request**
@@ -156,6 +188,8 @@ src/
     health/
       handler.ts         # GET /health → { status: "ok" }
       index.ts           # Route registration (GET /health)
+    metrics/
+      index.ts           # Route registration (GET /metrics)
     pdf/
       schema.ts          # Zod schema → JSON Schema for AJV validation
       handler.ts         # Orchestration: generate PDF → stream or upload to S3
@@ -163,12 +197,14 @@ src/
   services/
     pdf/PdfService.ts          # Puppeteer browser lifecycle + PDF generation
     storage/StorageService.ts  # S3 upload (s3) + presigned URL (s3Public)
+    metrics/MetricsService.ts  # In-memory Prometheus metrics (histograms + counters)
   types/
     index.ts                   # Shared TypeScript interfaces
     aws-lambda-fastify.d.ts    # Ambient type declaration for aws-lambda-fastify
 
 test/integration/
   generate.test.ts       # Full route tests via app.inject() — no real browser
+  metrics.test.ts        # GET /metrics — verifies histogram/counter output after a generation
 ```
 
 ## Stack

@@ -33,6 +33,8 @@ src/
     health/
       handler.ts         # GET /health → { status: "ok" }
       index.ts           # Registers GET /health
+    metrics/
+      index.ts           # Registers GET /metrics; injects MetricsService
     pdf/
       schema.ts          # Zod schema; z.toJSONSchema() with $schema stripped for AJV compat
       handler.ts         # generate PDF → stream bytes or upload to S3 + return presigned URL
@@ -40,6 +42,7 @@ src/
   services/
     pdf/PdfService.ts          # Puppeteer browser lifecycle + PDF generation
     storage/StorageService.ts  # S3 upload (s3 client) + presigned URL (s3Public client)
+    metrics/MetricsService.ts  # In-memory histograms + counter; serialises to Prometheus text
   types/
     index.ts                   # GenerateRequest, PaperOptions, PdfOptions, GenerateResponse
     aws-lambda-fastify.d.ts    # Ambient declaration for aws-lambda-fastify (no types shipped)
@@ -59,6 +62,22 @@ Returns service liveness. Also responds to `HEAD /health`.
 Use for load balancer health checks or Lambda function URL probes. No auth required.
 
 **Files:** `src/routes/health/index.ts`, `src/routes/health/handler.ts`
+
+---
+
+### GET /metrics
+
+Returns Prometheus text-format metrics (`text/plain; version=0.0.4`).
+
+| Metric | Type | Buckets |
+|---|---|---|
+| `pdf_generation_duration_ms` | histogram | 100, 250, 500, 1000, 2500, 5000, 10000 ms |
+| `pdf_size_bytes` | histogram | 10 KB, 50 KB, 100 KB, 500 KB, 1 MB, 5 MB, 10 MB |
+| `pdf_generation_requests_total` | counter | labels: `status="success"`, `status="error"` |
+
+Metrics are in-memory (reset on restart). `MetricsService` is instantiated in `server.ts`, passed to the PDF route handler (which calls `recordSuccess`/`recordError`), and injected into the metrics route.
+
+**Files:** `src/routes/metrics/index.ts`, `src/services/metrics/MetricsService.ts`
 
 ---
 
@@ -142,7 +161,7 @@ npm run build
 ## Testing Strategy
 
 - **Unit tests**: `PdfService` and `StorageService` are unit-tested with mocked dependencies (no real browser, no real S3). Vitest v4 requires constructor mocks to use `class` syntax — not arrow function implementations.
-- **Integration tests**: `test/integration/generate.test.ts` uses `app.inject()` — full Fastify route pipeline, no real browser or S3.
+- **Integration tests**: `test/integration/generate.test.ts` and `test/integration/metrics.test.ts` use `app.inject()` — full Fastify route pipeline, no real browser or S3. The metrics test fires a `/pdf/generate` request and then asserts that counters and bucket values in `/metrics` reflect it.
 - **No Chromium in CI**: Tests run with mocked Puppeteer, so CI doesn't need to install Chromium.
 
 ## Extension Plans
@@ -156,7 +175,7 @@ Planned features are documented in `.plans/`:
 | `url-rendering.md` | Render a URL instead of raw HTML (includes SSRF notes) |
 | `async-webhook.md` | `202 Accepted` + webhook callback for slow jobs |
 | `api-key-auth.md` | `X-Api-Key` header auth with timing-safe comparison |
-| `observability.md` | `/metrics`, PDF generation histograms (`/health` already implemented) |
+| `observability.md` | `/metrics` + PDF generation histograms — **implemented** |
 | `additional-routes.md` | `GET /pdf/:id`, `DELETE /pdf/:id`, `POST /pdf/merge` |
 | `queue-based-scaling.md` | SQS / BullMQ decoupled worker tier |
 | `node-server-deployment.md` | ECS Fargate / Fly.io plain Node server deployment |
