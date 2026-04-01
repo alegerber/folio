@@ -338,6 +338,27 @@ setup_ecr() {
     >/dev/null
 
   success "ECR repository $ECR_REPOSITORY created"
+
+  _set_ecr_policy
+}
+
+_set_ecr_policy() {
+  aws ecr set-repository-policy \
+    --repository-name "$ECR_REPOSITORY" \
+    --region "$REGION" \
+    --policy-text "$(cat <<JSON
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "LambdaECRAccess",
+    "Effect": "Allow",
+    "Principal": {"Service": "lambda.amazonaws.com"},
+    "Action": ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer"]
+  }]
+}
+JSON
+)" >/dev/null
+  success "ECR repository policy set (Lambda pull access)"
 }
 
 # ── GitHub Secrets ────────────────────────────────────────────────────────────
