@@ -2,6 +2,7 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
@@ -14,6 +15,32 @@ export class StorageService {
     private readonly s3: S3Client,
     private readonly s3Public: S3Client,
   ) {}
+
+  private keyFromId(id: string): string {
+    return `pdfs/${id}.pdf`;
+  }
+
+  async getUrl(id: string): Promise<string> {
+    return getSignedUrl(
+      this.s3Public,
+      new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: this.keyFromId(id) }),
+      { expiresIn: env.SIGNED_URL_EXPIRY_SECONDS },
+    );
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.s3.send(
+      new DeleteObjectCommand({ Bucket: env.S3_BUCKET, Key: this.keyFromId(id) }),
+    );
+  }
+
+  async download(id: string): Promise<Buffer> {
+    const response = await this.s3.send(
+      new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: this.keyFromId(id) }),
+    );
+    const bytes = await response.Body!.transformToByteArray();
+    return Buffer.from(bytes);
+  }
 
   async upload(pdfBuffer: Buffer): Promise<string> {
     const key = `pdfs/${randomUUID()}.pdf`;

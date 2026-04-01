@@ -10,7 +10,8 @@ Runs as both a Docker container (local dev) and an AWS Lambda container image (p
 | Layer | Package | Version |
 |---|---|---|
 | Framework | Fastify | 5.x |
-| PDF | puppeteer-core + @sparticuz/chromium | 24.x / 143.x |
+| PDF rendering | puppeteer-core + @sparticuz/chromium | 24.x / 143.x |
+| PDF merging | pdf-lib | 1.x |
 | Validation | Zod | 4.x |
 | Storage | @aws-sdk/client-s3 | 3.x |
 | Logging | Pino (Fastify built-in) + pino-pretty | — |
@@ -109,6 +110,61 @@ Metrics are in-memory (reset on restart). `MetricsService` is instantiated in `s
 - `Content-Type: application/pdf`
 - Binary PDF bytes
 
+---
+
+### GET /pdf/:id
+
+Returns a fresh presigned URL for a previously generated PDF. The id path parameter must be a UUID.
+
+**Response:**
+```json
+{ "statusCode": 200, "data": { "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
+```
+
+S3 key format: `pdfs/{id}.pdf`. TTL governed by `SIGNED_URL_EXPIRY_SECONDS`.
+
+**Files:** `src/routes/pdf/index.ts`, `src/routes/pdf/handler.ts` (`createGetHandler`), `src/services/storage/StorageService.ts` (`getUrl`)
+
+---
+
+### DELETE /pdf/:id
+
+Permanently deletes a PDF from S3. The id path parameter must be a UUID.
+
+**Response:** `HTTP 204 No Content`
+
+**Files:** `src/routes/pdf/index.ts`, `src/routes/pdf/handler.ts` (`createDeleteHandler`), `src/services/storage/StorageService.ts` (`delete`)
+
+---
+
+### POST /pdf/merge
+
+Downloads two or more existing PDFs by their IDs, merges them in page order using `pdf-lib`, and either streams the result or uploads it to S3.
+
+**Request body:**
+```json
+{
+  "ids": ["550e8400-e29b-41d4-a716-446655440000", "6ba7b810-9dad-11d1-80b4-00c04fd430c8"],
+  "stream": false
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `ids` | UUID[] | yes | Ordered list of PDF IDs (minimum 2) |
+| `stream` | boolean | no | `true` = binary, `false` = S3 URL (default) |
+
+**Response (`stream: false`):**
+```json
+{ "statusCode": 200, "data": { "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
+```
+
+**Response (`stream: true`):** `Content-Type: application/pdf`, `Content-Disposition: attachment; filename="merged.pdf"`, binary PDF bytes.
+
+All source PDFs are fetched in parallel (`Promise.all`). Pages are copied in the order of the `ids` array.
+
+**Files:** `src/routes/pdf/index.ts`, `src/routes/pdf/handler.ts` (`createMergeHandler`), `src/services/storage/StorageService.ts` (`download`, `upload`)
+
 ## Key Decisions
 
 1. **Browser reuse**: `PdfService` holds the `Browser` instance at class level. `lambda.ts` calls `buildApp()` outside the handler via a module-level promise — Lambda freezes the process between invocations, so the browser survives and is reused on warm calls.
@@ -179,6 +235,6 @@ Planned features are documented in `.plans/`:
 | `async-webhook.md` | `202 Accepted` + webhook callback for slow jobs | Planned |
 | `api-key-auth.md` | `X-Api-Key` header auth with timing-safe comparison | Planned |
 | `observability.md` | `/health`, `/metrics`, PDF generation histograms | Implemented |
-| `additional-routes.md` | `GET /pdf/:id`, `DELETE /pdf/:id`, `POST /pdf/merge` | Planned |
+| `additional-routes.md` | `GET /pdf/:id`, `DELETE /pdf/:id`, `POST /pdf/merge` | Implemented |
 | `queue-based-scaling.md` | SQS / BullMQ decoupled worker tier | Planned |
 | `node-server-deployment.md` | ECS Fargate / Fly.io plain Node server deployment | Planned |
