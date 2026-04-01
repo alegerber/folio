@@ -109,6 +109,74 @@ Content-Disposition: attachment; filename="document.pdf"
 <binary PDF bytes>
 ```
 
+---
+
+### `GET /pdf/:id`
+
+Returns a fresh presigned `GetObject` URL for a previously generated PDF.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | UUID (path) | The UUID returned at generation time |
+
+**Response**
+
+```json
+{ "statusCode": 200, "data": { "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
+```
+
+The TTL of the returned URL is controlled by `SIGNED_URL_EXPIRY_SECONDS` (default 1 h). The PDF is stored under the key `pdfs/{id}.pdf`.
+
+---
+
+### `DELETE /pdf/:id`
+
+Permanently deletes a PDF from S3.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | UUID (path) | The UUID of the PDF to delete |
+
+**Response**
+
+```
+HTTP 204 No Content
+```
+
+---
+
+### `POST /pdf/merge`
+
+Merges two or more existing PDFs (by their IDs) into a single document in page order.
+
+**Request**
+
+```json
+{
+  "ids": ["550e8400-e29b-41d4-a716-446655440000", "6ba7b810-9dad-11d1-80b4-00c04fd430c8"],
+  "stream": false
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `ids` | UUID[] | yes | Ordered list of PDF IDs to merge (minimum 2) |
+| `stream` | boolean | no | `true` = binary response, `false` = S3 URL (default) |
+
+**Response — S3 URL (`stream: false`)**
+
+```json
+{ "statusCode": 200, "data": { "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
+```
+
+**Response — binary stream (`stream: true`)**
+
+```
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="merged.pdf"
+<binary PDF bytes>
+```
+
 ## Local development
 
 Prerequisites: Docker and Docker Compose.
@@ -214,7 +282,8 @@ test/integration/
 | Layer | Package | Version |
 |---|---|---|
 | Framework | Fastify | 5.x |
-| PDF | puppeteer-core + @sparticuz/chromium | 24.x / 143.x |
+| PDF rendering | puppeteer-core + @sparticuz/chromium | 24.x / 143.x |
+| PDF merging | pdf-lib | 1.x |
 | Validation | Zod | 4.x |
 | Storage | @aws-sdk/client-s3 | 3.x |
 | Logging | Pino (Fastify built-in) + pino-pretty | — |
