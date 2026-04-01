@@ -13,6 +13,20 @@ The Chromium browser is launched once at startup and reused across requests. On 
 
 ## API
 
+### `GET /health`
+
+Returns service liveness. Also responds to `HEAD /health` (no body).
+
+**Response**
+
+```json
+{ "status": "ok" }
+```
+
+Use this as the target for load balancer health checks or Lambda function URL probes.
+
+---
+
 ### `POST /pdf/generate`
 
 **Request**
@@ -138,10 +152,14 @@ src/
   plugins/
     s3.ts                # Registers s3 (upload) and s3Public (presigning) decorators
     sensible.ts          # @fastify/sensible (httpErrors, assert)
-  routes/pdf/
-    schema.ts            # Zod schema → JSON Schema for AJV validation
-    handler.ts           # Orchestration: generate PDF → stream or upload to S3
-    index.ts             # Route registration (POST /pdf/generate)
+  routes/
+    health/
+      handler.ts         # GET /health → { status: "ok" }
+      index.ts           # Route registration (GET /health)
+    pdf/
+      schema.ts          # Zod schema → JSON Schema for AJV validation
+      handler.ts         # Orchestration: generate PDF → stream or upload to S3
+      index.ts           # Route registration (POST /pdf/generate)
   services/
     pdf/PdfService.ts          # Puppeteer browser lifecycle + PDF generation
     storage/StorageService.ts  # S3 upload (s3) + presigned URL (s3Public)
