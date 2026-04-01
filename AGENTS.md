@@ -1,8 +1,8 @@
-# AGENTS.md — PDF Microservice
+# AGENTS.md — folio
 
 ## Project Overview
 
-Node.js PDF generation microservice built with Fastify 5, Puppeteer (headless Chromium), and AWS S3.
+Serverless-native PDF API built with Fastify 5, Puppeteer (headless Chromium), and AWS S3.
 Runs as both a Docker container (local dev) and an AWS Lambda container image (production) — same image, same binary.
 
 ## Stack
@@ -307,17 +307,34 @@ npm run build
 
 ## Extension Plans
 
-Planned features are documented in `.plans/`:
+Planned features are documented in `.plans/`. See [`.plans/PLAN.md`](.plans/PLAN.md) for the full roadmap and Gotenberg feature comparison.
 
-| File | Description | Status |
-|---|---|---|
-| `headers-footers.md` | HTML header/footer templates on every PDF page | Implemented |
-| `css-injection.md` | Inject extra CSS before rendering | Implemented |
-| `url-rendering.md` | Render a URL instead of raw HTML (includes SSRF notes) | Planned |
-| `async-webhook.md` | `202 Accepted` + webhook callback for slow jobs | Planned |
-| `api-key-auth.md` | `X-Api-Key` header auth with timing-safe comparison | Implemented |
-| `observability.md` | `/health`, `/metrics`, PDF generation histograms | Implemented |
-| `additional-routes.md` | `GET /pdf/:id`, `DELETE /pdf/:id`, `POST /pdf/merge` | Implemented |
-| `pdf-operations.md` | `POST /pdf/split`, `POST /pdf/compress`, `POST /pdf/pdfa` | Implemented |
-| `queue-based-scaling.md` | SQS / BullMQ decoupled worker tier | Planned |
-| `node-server-deployment.md` | ECS Fargate / Fly.io plain Node server deployment | Planned |
+### Implemented
+
+| File | Description |
+|---|---|
+| `api-key-auth.md` | `X-Api-Key` header auth with timing-safe comparison |
+| `headers-footers.md` | HTML header/footer templates on every PDF page |
+| `css-injection.md` | Inject extra CSS before rendering |
+| `observability.md` | `GET /health`, `GET /metrics`, PDF generation histograms |
+| `additional-routes.md` | `GET /pdf/:id`, `DELETE /pdf/:id`, `POST /pdf/merge` |
+| `pdf-operations.md` | `POST /pdf/split`, `/pdf/compress`, `/pdf/pdfa` |
+
+### Planned — Gotenberg feature parity
+
+| File | Description |
+|---|---|
+| `ssrf-protection.md` | Shared SSRF guard for URL-accepting endpoints |
+| `url-rendering.md` | Render a URL instead of raw HTML |
+| `screenshot-api.md` | `POST /screenshot` — HTML/URL → PNG/JPEG/WebP |
+| `libreoffice-conversion.md` | `POST /convert` — DOCX/XLSX/PPTX → PDF via LibreOffice (Docker/ECS only) |
+| `openapi-docs.md` | `GET /docs` Swagger UI + `GET /openapi.json` |
+
+### Planned — Infrastructure & Scale
+
+| File | Description |
+|---|---|
+| `node-server-deployment.md` | ECS Fargate / Fly.io plain Node server Docker stage |
+| `async-webhook.md` | `202 Accepted` + webhook callback for slow jobs |
+| `queue-based-scaling.md` | SQS / BullMQ decoupled worker tier |
+| `open-source-publishing.md` | LICENSE, GHCR image publishing, release-please, CONTRIBUTING |
