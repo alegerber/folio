@@ -49,11 +49,14 @@ src/
 ```json
 {
   "html": "<html>...</html>",
+  "css": "body { font-family: Arial; }",
   "paper": { "size": "A4", "orientation": "portrait" },
   "options": {
     "margin": { "top": "10mm", "right": "10mm", "bottom": "10mm", "left": "10mm" },
     "scale": 1.0,
-    "printBackground": false
+    "printBackground": false,
+    "headerTemplate": "<div style=\"font-size:10px;\">Header</div>",
+    "footerTemplate": "<div style=\"font-size:10px;\">Page <span class=\"pageNumber\"></span></div>"
   },
   "stream": false
 }
@@ -130,14 +133,14 @@ npm run build
 
 Planned features are documented in `.plans/`:
 
-| File | Description |
-|---|---|
-| `headers-footers.md` | HTML header/footer templates on every PDF page |
-| `css-injection.md` | Inject extra CSS before rendering |
-| `url-rendering.md` | Render a URL instead of raw HTML (includes SSRF notes) |
-| `async-webhook.md` | `202 Accepted` + webhook callback for slow jobs |
-| `api-key-auth.md` | `X-Api-Key` header auth with timing-safe comparison |
-| `observability.md` | `/health`, `/metrics`, PDF generation histograms |
-| `additional-routes.md` | `GET /pdf/:id`, `DELETE /pdf/:id`, `POST /pdf/merge` |
-| `queue-based-scaling.md` | SQS / BullMQ decoupled worker tier |
-| `node-server-deployment.md` | ECS Fargate / Fly.io plain Node server deployment |
+| File | Description | Status |
+|---|---|---|
+| `headers-footers.md` | HTML header/footer templates on every PDF page | Implemented |
+| `css-injection.md` | Inject extra CSS before rendering | Implemented |
+| `url-rendering.md` | Render a URL instead of raw HTML (includes SSRF notes) | Planned |
+| `async-webhook.md` | `202 Accepted` + webhook callback for slow jobs | Planned |
+| `api-key-auth.md` | `X-Api-Key` header auth with timing-safe comparison | Planned |
+| `observability.md` | `/health`, `/metrics`, PDF generation histograms | Planned |
+| `additional-routes.md` | `GET /pdf/:id`, `DELETE /pdf/:id`, `POST /pdf/merge` | Planned |
+| `queue-based-scaling.md` | SQS / BullMQ decoupled worker tier | Planned |
+| `node-server-deployment.md` | ECS Fargate / Fly.io plain Node server deployment | Planned |
