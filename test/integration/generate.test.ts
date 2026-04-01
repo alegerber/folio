@@ -149,6 +149,19 @@ describe('POST /pdf/generate', () => {
     expect(response.statusCode).toBe(200);
   });
 
+  it('accepts a css field and returns 200', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/pdf/generate',
+      payload: {
+        html: '<html><body><h1>Test</h1></body></html>',
+        css: 'body { font-size: 14px; color: #333; }',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+  });
+
   it('accepts headerTemplate without footerTemplate', async () => {
     const response = await app.inject({
       method: 'POST',

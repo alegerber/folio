@@ -4,8 +4,10 @@ import { PdfService } from './PdfService.js';
 const mockPdf = vi.fn().mockResolvedValue(Buffer.from('%PDF-1.4 mock'));
 const mockClose = vi.fn().mockResolvedValue(undefined);
 const mockSetContent = vi.fn().mockResolvedValue(undefined);
+const mockAddStyleTag = vi.fn().mockResolvedValue(undefined);
 const mockNewPage = vi.fn().mockResolvedValue({
   setContent: mockSetContent,
+  addStyleTag: mockAddStyleTag,
   pdf: mockPdf,
   close: mockClose,
 });
@@ -43,14 +45,31 @@ describe('PdfService', () => {
     const result = await pdfService.generate(html);
 
     expect(mockSetContent).toHaveBeenCalledWith(html, { waitUntil: 'networkidle0' });
+    expect(mockAddStyleTag).not.toHaveBeenCalled();
     expect(mockPdf).toHaveBeenCalledOnce();
     expect(result).toBeInstanceOf(Buffer);
+  });
+
+  it('injects CSS via addStyleTag when css is provided', async () => {
+    const html = '<html><body><h1>Hello</h1></body></html>';
+    const css = 'body { font-size: 14px; }';
+
+    await pdfService.generate(html, css);
+
+    expect(mockSetContent).toHaveBeenCalledWith(html, { waitUntil: 'networkidle0' });
+    expect(mockAddStyleTag).toHaveBeenCalledWith({ content: css });
+  });
+
+  it('does not call addStyleTag when css is not provided', async () => {
+    await pdfService.generate('<html></html>');
+
+    expect(mockAddStyleTag).not.toHaveBeenCalled();
   });
 
   it('applies paper size options', async () => {
     const html = '<html><body></body></html>';
 
-    await pdfService.generate(html, { size: 'A4', orientation: 'portrait' });
+    await pdfService.generate(html, undefined, { size: 'A4', orientation: 'portrait' });
 
     const pdfCall = mockPdf.mock.calls[0][0];
     expect(pdfCall).toMatchObject({ width: '210mm', height: '297mm' });
@@ -59,7 +78,7 @@ describe('PdfService', () => {
   it('applies landscape orientation by swapping dimensions', async () => {
     const html = '<html><body></body></html>';
 
-    await pdfService.generate(html, { size: 'A4', orientation: 'landscape' });
+    await pdfService.generate(html, undefined, { size: 'A4', orientation: 'landscape' });
 
     const pdfCall = mockPdf.mock.calls[0][0];
     expect(pdfCall).toMatchObject({ width: '297mm', height: '210mm' });
@@ -70,6 +89,7 @@ describe('PdfService', () => {
 
     await pdfService.generate(
       html,
+      undefined,
       undefined,
       {
         printBackground: true,

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const generateRequestSchema = z.object({
   html: z.string().min(1, 'html is required'),
+  css: z.string().optional(),
   paper: z
     .object({
       size: z.string().optional(),
