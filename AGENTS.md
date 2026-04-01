@@ -11,7 +11,8 @@ Runs as both a Docker container (local dev) and an AWS Lambda container image (p
 |---|---|---|
 | Framework | Fastify | 5.x |
 | PDF rendering | puppeteer-core + @sparticuz/chromium | 24.x / 143.x |
-| PDF merging | pdf-lib | 1.x |
+| PDF manipulation | pdf-lib | 1.x |
+| PDF compression / PDF/A | Ghostscript (optional, via `GHOSTSCRIPT_PATH`) | — |
 | Validation | Zod | 4.x |
 | Storage | @aws-sdk/client-s3 | 3.x |
 | Logging | Pino (Fastify built-in) + pino-pretty | — |
@@ -42,9 +43,10 @@ src/
       handler.ts         # generate PDF → stream bytes or upload to S3 + return presigned URL
       index.ts           # Registers POST /pdf/generate
   services/
-    pdf/PdfService.ts          # Puppeteer browser lifecycle + PDF generation
-    storage/StorageService.ts  # S3 upload (s3 client) + presigned URL (s3Public client)
-    metrics/MetricsService.ts  # In-memory histograms + counter; serialises to Prometheus text
+    pdf/PdfService.ts               # Puppeteer browser lifecycle + PDF generation
+    pdf/PdfOperationsService.ts     # split (pdf-lib), compress + PDF/A (Ghostscript / pdf-lib fallback)
+    storage/StorageService.ts       # S3 upload (s3 client) + presigned URL (s3Public client)
+    metrics/MetricsService.ts       # In-memory histograms + counter; serialises to Prometheus text
   types/
     index.ts                   # GenerateRequest, PaperOptions, PdfOptions, GenerateResponse
     aws-lambda-fastify.d.ts    # Ambient declaration for aws-lambda-fastify (no types shipped)
@@ -172,6 +174,75 @@ All source PDFs are fetched in parallel (`Promise.all`). Pages are copied in the
 
 **Files:** `src/routes/pdf/index.ts`, `src/routes/pdf/handler.ts` (`createMergeHandler`), `src/services/storage/StorageService.ts` (`download`, `upload`)
 
+---
+
+### POST /pdf/split
+
+Extracts a subset of pages from an existing PDF using `pdf-lib`.
+
+**Request body:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "pages": "1-3,5,7-",
+  "stream": false
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | UUID | yes | Source PDF ID |
+| `pages` | string | yes | Page range expression: `"1-3"` (range), `"1,3,5"` (comma list), `"2-"` (open-ended) |
+| `stream` | boolean | no | `true` = binary, `false` = S3 URL (default) |
+
+Page numbers are 1-based. Ranges are inclusive. Out-of-range indices are silently dropped. Duplicates are deduplicated. Returns `500` if the expression yields no valid pages.
+
+**Files:** `src/routes/pdf/handler.ts` (`createSplitHandler`), `src/services/pdf/PdfOperationsService.ts` (`split`, `parsePageRange`)
+
+---
+
+### POST /pdf/compress
+
+Reduces file size of an existing PDF. Always available — uses Ghostscript (`-dPDFSETTINGS=/ebook`) when `GHOSTSCRIPT_PATH` is set; falls back to `pdf-lib` re-save with `useObjectStreams: true` otherwise.
+
+**Request body:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "stream": false
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | UUID | yes | Source PDF ID |
+| `stream` | boolean | no | `true` = binary, `false` = S3 URL (default) |
+
+**Files:** `src/routes/pdf/handler.ts` (`createCompressHandler`), `src/services/pdf/PdfOperationsService.ts` (`compress`, `ghostscriptCompress`)
+
+---
+
+### POST /pdf/pdfa
+
+Converts an existing PDF to PDF/A using Ghostscript. **Route is only registered when `GHOSTSCRIPT_PATH` is set.**
+
+**Request body:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "conformance": "2b",
+  "stream": false
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | UUID | yes | Source PDF ID |
+| `conformance` | `"1b"` \| `"2b"` \| `"3b"` | no | PDF/A conformance level (default `"2b"`) |
+| `stream` | boolean | no | `true` = binary, `false` = S3 URL (default) |
+
+**Files:** `src/routes/pdf/handler.ts` (`createPdfAHandler`), `src/services/pdf/PdfOperationsService.ts` (`convertToPdfA`, `ghostscriptPdfA`)
+
 ## Key Decisions
 
 1. **Browser reuse**: `PdfService` holds the `Browser` instance at class level. `lambda.ts` calls `buildApp()` outside the handler via a module-level promise — Lambda freezes the process between invocations, so the browser survives and is reused on warm calls.
@@ -187,6 +258,8 @@ All source PDFs are fetched in parallel (`Promise.all`). Pages are copied in the
 6. **`--no-sandbox`**: `@sparticuz/chromium` sets this automatically via its `args` export. Always use `chromium.args`, `chromium.executablePath()`, and `chromium.headless` when launching.
 
 7. **`platform: linux/amd64`** in `docker-compose.yml`: `@sparticuz/chromium` ships only x86_64 binaries. On Apple Silicon, Docker must build/run under Rosetta 2 emulation.
+
+8. **Ghostscript gating**: `POST /pdf/compress` always exists (pdf-lib fallback), while `POST /pdf/pdfa` is only registered when `GHOSTSCRIPT_PATH` is set (`opsService.canUseGhostscript`). Ghostscript operations write to unique temp files in `os.tmpdir()` and clean up via `Promise.allSettled` in a `finally` block — even if Ghostscript fails.
 
 ## Development
 
@@ -224,6 +297,7 @@ npm run build
 | `LOG_LEVEL` | no | Default: `info` |
 | `PORT` | no | Default: `8080` |
 | `API_KEY` | recommended in prod | Static API key (min 32 chars). Omit to disable auth. |
+| `GHOSTSCRIPT_PATH` | no | Path to the `gs` binary (e.g. `/usr/bin/gs`). Enables Ghostscript-based compression and activates `POST /pdf/pdfa`. |
 
 ## Testing Strategy
 
@@ -244,5 +318,6 @@ Planned features are documented in `.plans/`:
 | `api-key-auth.md` | `X-Api-Key` header auth with timing-safe comparison | Implemented |
 | `observability.md` | `/health`, `/metrics`, PDF generation histograms | Implemented |
 | `additional-routes.md` | `GET /pdf/:id`, `DELETE /pdf/:id`, `POST /pdf/merge` | Implemented |
+| `pdf-operations.md` | `POST /pdf/split`, `POST /pdf/compress`, `POST /pdf/pdfa` | Implemented |
 | `queue-based-scaling.md` | SQS / BullMQ decoupled worker tier | Planned |
 | `node-server-deployment.md` | ECS Fargate / Fly.io plain Node server deployment | Planned |

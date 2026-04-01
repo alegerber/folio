@@ -177,6 +177,112 @@ Content-Disposition: attachment; filename="merged.pdf"
 <binary PDF bytes>
 ```
 
+---
+
+### `POST /pdf/split`
+
+Extracts a subset of pages from an existing PDF.
+
+**Request**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "pages": "1-3,5,7-",
+  "stream": false
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | UUID | yes | Source PDF ID |
+| `pages` | string | yes | Page range: `"1-3"` (range), `"1,3,5"` (list), `"2-"` (from page 2 to end) |
+| `stream` | boolean | no | `true` = binary response, `false` = S3 URL (default) |
+
+**Response — S3 URL (`stream: false`)**
+
+```json
+{ "statusCode": 200, "data": { "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
+```
+
+**Response — binary stream (`stream: true`)**
+
+```
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="split.pdf"
+<binary PDF bytes>
+```
+
+---
+
+### `POST /pdf/compress`
+
+Reduces the file size of an existing PDF. Uses Ghostscript when `GHOSTSCRIPT_PATH` is set (re-encodes images and streams); otherwise falls back to re-saving with `pdf-lib` object streams (reduces xref table size for text-heavy documents).
+
+**Request**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "stream": false
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | UUID | yes | Source PDF ID |
+| `stream` | boolean | no | `true` = binary response, `false` = S3 URL (default) |
+
+**Response — S3 URL (`stream: false`)**
+
+```json
+{ "statusCode": 200, "data": { "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
+```
+
+**Response — binary stream (`stream: true`)**
+
+```
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="compressed.pdf"
+<binary PDF bytes>
+```
+
+---
+
+### `POST /pdf/pdfa`
+
+Converts an existing PDF to PDF/A for long-term archival compliance. **Requires `GHOSTSCRIPT_PATH` to be set** — the route is not registered otherwise.
+
+**Request**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "conformance": "2b",
+  "stream": false
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | UUID | yes | Source PDF ID |
+| `conformance` | `"1b"` \| `"2b"` \| `"3b"` | no | PDF/A conformance level (default `"2b"`) |
+| `stream` | boolean | no | `true` = binary response, `false` = S3 URL (default) |
+
+**Response — S3 URL (`stream: false`)**
+
+```json
+{ "statusCode": 200, "data": { "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
+```
+
+**Response — binary stream (`stream: true`)**
+
+```
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="pdfa.pdf"
+<binary PDF bytes>
+```
+
 ## Local development
 
 Prerequisites: Docker and Docker Compose.
@@ -249,6 +355,7 @@ curl -X POST http://localhost:8080/pdf/generate \
 | `LOG_LEVEL` | no | `trace` `debug` `info` `warn` `error` — default `info` |
 | `PORT` | no | HTTP port for local server, default `8080` |
 | `API_KEY` | recommended in prod | Static API key for request authentication (min 32 chars). Omit to disable auth. |
+| `GHOSTSCRIPT_PATH` | no | Path to the `gs` binary. Enables real image compression on `POST /pdf/compress` and activates the `POST /pdf/pdfa` route. |
 
 See [.env.example](.env.example) for a ready-to-copy template.
 
@@ -284,9 +391,10 @@ src/
       handler.ts         # Orchestration: generate PDF → stream or upload to S3
       index.ts           # Route registration (POST /pdf/generate)
   services/
-    pdf/PdfService.ts          # Puppeteer browser lifecycle + PDF generation
-    storage/StorageService.ts  # S3 upload (s3) + presigned URL (s3Public)
-    metrics/MetricsService.ts  # In-memory Prometheus metrics (histograms + counters)
+    pdf/PdfService.ts               # Puppeteer browser lifecycle + PDF generation
+    pdf/PdfOperationsService.ts     # split (pdf-lib), compress + PDF/A (Ghostscript / pdf-lib fallback)
+    storage/StorageService.ts       # S3 upload (s3) + presigned URL (s3Public)
+    metrics/MetricsService.ts       # In-memory Prometheus metrics (histograms + counters)
   types/
     index.ts                   # Shared TypeScript interfaces
     aws-lambda-fastify.d.ts    # Ambient type declaration for aws-lambda-fastify

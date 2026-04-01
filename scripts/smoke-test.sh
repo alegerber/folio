@@ -231,6 +231,98 @@ assert_eq "HTTP 400" "400" "$HTTP_CODE"
 
 echo ""
 
+# ── POST /pdf/split → binary stream ──────────────────────────────────────────
+
+echo "--- POST /pdf/split (stream: true) ---"
+TMP_SPLIT=$(mktemp /tmp/smoke-test-split-XXXXXX.pdf)
+HTTP_CODE=$(curl -s -X POST "$BASE/pdf/split" \
+  $(auth_header) \
+  -H "Content-Type: application/json" \
+  -d "{\"id\": \"$ID1\", \"pages\": \"1\", \"stream\": true}" \
+  -o "$TMP_SPLIT" -w "%{http_code}")
+assert_eq "HTTP 200" "200" "$HTTP_CODE"
+
+MAGIC=$(head -c 4 "$TMP_SPLIT" 2>/dev/null || true)
+if [ "$MAGIC" = "%PDF" ]; then
+  ok "split response is a valid PDF"
+else
+  fail "split response is not a valid PDF (magic bytes: $MAGIC)"
+fi
+rm -f "$TMP_SPLIT"
+
+echo ""
+
+# ── POST /pdf/split → S3 URL ──────────────────────────────────────────────────
+
+echo "--- POST /pdf/split (stream: false) ---"
+RESP=$(curl -s -X POST "$BASE/pdf/split" \
+  $(auth_header) \
+  -H "Content-Type: application/json" \
+  -d "{\"id\": \"$ID1\", \"pages\": \"1\"}")
+STATUS_CODE=$(echo "$RESP" | grep -o '"statusCode":[0-9]*' | grep -o '[0-9]*')
+assert_eq "statusCode 200" "200" "$STATUS_CODE"
+assert_contains "split response contains url" '"url"' "$RESP"
+
+echo ""
+
+# ── POST /pdf/split with missing pages field → 400 ───────────────────────────
+
+echo "--- POST /pdf/split (missing pages → 400) ---"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/pdf/split" \
+  $(auth_header) \
+  -H "Content-Type: application/json" \
+  -d "{\"id\": \"$ID1\"}")
+assert_eq "HTTP 400" "400" "$HTTP_CODE"
+
+echo ""
+
+# ── POST /pdf/compress → binary stream ───────────────────────────────────────
+
+echo "--- POST /pdf/compress (stream: true) ---"
+TMP_COMPRESSED=$(mktemp /tmp/smoke-test-compressed-XXXXXX.pdf)
+HTTP_CODE=$(curl -s -X POST "$BASE/pdf/compress" \
+  $(auth_header) \
+  -H "Content-Type: application/json" \
+  -d "{\"id\": \"$ID1\", \"stream\": true}" \
+  -o "$TMP_COMPRESSED" -w "%{http_code}")
+assert_eq "HTTP 200" "200" "$HTTP_CODE"
+
+MAGIC=$(head -c 4 "$TMP_COMPRESSED" 2>/dev/null || true)
+if [ "$MAGIC" = "%PDF" ]; then
+  ok "compress response is a valid PDF"
+else
+  fail "compress response is not a valid PDF (magic bytes: $MAGIC)"
+fi
+rm -f "$TMP_COMPRESSED"
+
+echo ""
+
+# ── POST /pdf/pdfa (only when Ghostscript is available) ───────────────────────
+
+if [ -n "${GHOSTSCRIPT_PATH:-}" ]; then
+  echo "--- POST /pdf/pdfa (stream: true) ---"
+  TMP_PDFA=$(mktemp /tmp/smoke-test-pdfa-XXXXXX.pdf)
+  HTTP_CODE=$(curl -s -X POST "$BASE/pdf/pdfa" \
+    $(auth_header) \
+    -H "Content-Type: application/json" \
+    -d "{\"id\": \"$ID1\", \"conformance\": \"2b\", \"stream\": true}" \
+    -o "$TMP_PDFA" -w "%{http_code}")
+  assert_eq "HTTP 200" "200" "$HTTP_CODE"
+
+  MAGIC=$(head -c 4 "$TMP_PDFA" 2>/dev/null || true)
+  if [ "$MAGIC" = "%PDF" ]; then
+    ok "pdfa response is a valid PDF"
+  else
+    fail "pdfa response is not a valid PDF (magic bytes: $MAGIC)"
+  fi
+  rm -f "$TMP_PDFA"
+
+  echo ""
+else
+  echo "--- POST /pdf/pdfa (skipped — GHOSTSCRIPT_PATH not set) ---"
+  echo ""
+fi
+
 # ── DELETE /pdf/:id ───────────────────────────────────────────────────────────
 
 echo "--- DELETE /pdf/:id ---"

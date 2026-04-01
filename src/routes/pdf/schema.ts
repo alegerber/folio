@@ -51,3 +51,32 @@ export type MergeRequestInput = z.infer<typeof mergeRequestSchema>;
 
 const { $schema: _s2, ...mergeRequestJsonSchema } = z.toJSONSchema(mergeRequestSchema);
 export { mergeRequestJsonSchema };
+
+export const splitRequestSchema = z.object({
+  id: z.string().uuid(),
+  pages: z.string().min(1),
+  stream: z.boolean().optional().default(false),
+});
+export type SplitRequestInput = z.infer<typeof splitRequestSchema>;
+
+const { $schema: _s3, ...splitRequestJsonSchema } = z.toJSONSchema(splitRequestSchema);
+export { splitRequestJsonSchema };
+
+export const compressRequestSchema = z.object({
+  id: z.string().uuid(),
+  stream: z.boolean().optional().default(false),
+});
+export type CompressRequestInput = z.infer<typeof compressRequestSchema>;
+
+const { $schema: _s4, ...compressRequestJsonSchema } = z.toJSONSchema(compressRequestSchema);
+export { compressRequestJsonSchema };
+
+export const pdfARequestSchema = z.object({
+  id: z.string().uuid(),
+  conformance: z.enum(['1b', '2b', '3b']).optional().default('2b'),
+  stream: z.boolean().optional().default(false),
+});
+export type PdfARequestInput = z.infer<typeof pdfARequestSchema>;
+
+const { $schema: _s5, ...pdfARequestJsonSchema } = z.toJSONSchema(pdfARequestSchema);
+export { pdfARequestJsonSchema };

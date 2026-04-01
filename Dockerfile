@@ -14,6 +14,7 @@ RUN dnf install -y \
       alsa-lib \
       atk \
       cups-libs \
+      ghostscript \
       gtk3 \
       libX11 \
       libXcomposite \
