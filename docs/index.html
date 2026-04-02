@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>folio Docs</title>
+    <meta
+      name="description"
+      content="Documentation for folio, a serverless-native PDF API for AWS Lambda and Docker."
+    >
+    <link rel="stylesheet" href="assets/styles.css">
+  </head>
+  <body class="landing-page">
+    <header class="site-header">
+      <div class="site-width header-row">
+        <a class="brand" href="./">folio</a>
+        <nav class="top-nav" aria-label="Primary">
+          <a href="./api/">API Reference</a>
+          <a href="#quick-start">Quick Start</a>
+          <a href="#deployment">Deployment</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero-shell">
+        <div class="site-width hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">GitHub Pages documentation</p>
+            <h1>PDF generation for AWS-first teams, without a second deployment story.</h1>
+            <p class="hero-text">
+              folio runs from the same container image in AWS Lambda or plain Docker,
+              stores output in S3, and exposes HTML-to-PDF plus PDF operations through a
+              single Fastify API.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="./api/">Read the API reference</a>
+              <a class="button button-secondary" href="#quick-start">Start locally</a>
+            </div>
+          </div>
+
+          <aside class="hero-panel">
+            <p class="panel-title">What ships today</p>
+            <ul class="feature-list">
+              <li>HTML to PDF with CSS, headers, and footers</li>
+              <li>S3 upload plus presigned URL responses</li>
+              <li>PDF merge, split, compress, and PDF/A routes</li>
+              <li>Static API key auth and Prometheus-style metrics</li>
+              <li>Shared Lambda and Docker runtime model</li>
+            </ul>
+          </aside>
+        </div>
+      </section>
+
+      <section class="site-width card-grid" aria-label="Documentation sections">
+        <article class="feature-card">
+          <p class="card-kicker">Reference</p>
+          <h2>API-first docs</h2>
+          <p>
+            Endpoint docs live in a dedicated reference page with request bodies,
+            response examples, auth behavior, and route-specific notes.
+          </p>
+          <a class="card-link" href="./api/">Open API reference</a>
+        </article>
+
+        <article class="feature-card">
+          <p class="card-kicker">Local dev</p>
+          <h2>One compose file</h2>
+          <p>
+            Spin up the API and MinIO locally, generate a PDF, then test the rest of the
+            routes against the same storage flow used in production.
+          </p>
+          <a class="card-link" href="#quick-start">View quick start</a>
+        </article>
+
+        <article class="feature-card">
+          <p class="card-kicker">Operations</p>
+          <h2>Built for AWS paths</h2>
+          <p>
+            The repo includes SAM deployment, Docker support, auth, metrics, and a smoke
+            test flow so the service is ready for hosted use, not only demos.
+          </p>
+          <a class="card-link" href="#deployment">Read deployment notes</a>
+        </article>
+      </section>
+
+      <section id="quick-start" class="site-width section-grid">
+        <div>
+          <p class="section-kicker">Quick start</p>
+          <h2>Start locally in a few commands</h2>
+          <p>
+            The local stack uses MinIO for S3-compatible storage and keeps the presigned
+            URLs host-reachable from your browser.
+          </p>
+        </div>
+
+        <div class="code-panel">
+          <pre><code># Copy and edit environment variables
+cp .env.example .env
+
+# Optional: local SAM deploy config
+cp samconfig.example.toml samconfig.toml
+
+# Start API + MinIO (local S3)
+docker compose up
+
+# Generate a PDF
+curl -s -X POST http://localhost:8080/pdf/generate \
+  -H "Content-Type: application/json" \
+  -d '{"html":"&lt;html&gt;&lt;body&gt;&lt;h1&gt;Hello&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;"}' | jq .</code></pre>
+        </div>
+      </section>
+
+      <section class="site-width stack-layout">
+        <div class="stack-card">
+          <p class="section-kicker">Runtime model</p>
+          <h2>One image, two targets</h2>
+          <p>
+            The same container image runs in Lambda or as a regular Docker service. PDF
+            bytes go directly to S3, which keeps the service aligned with Lambda’s
+            ephemeral filesystem model.
+          </p>
+        </div>
+
+        <div class="stack-card">
+          <p class="section-kicker">Current routes</p>
+          <h2>Core endpoints</h2>
+          <ul class="compact-list">
+            <li><code>GET /health</code> and <code>GET /metrics</code></li>
+            <li><code>POST /pdf/generate</code></li>
+            <li><code>GET /pdf/:id</code> and <code>DELETE /pdf/:id</code></li>
+            <li><code>POST /pdf/merge</code>, <code>/pdf/split</code>, <code>/pdf/compress</code>, <code>/pdf/pdfa</code></li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="deployment" class="site-width deployment-banner">
+        <div>
+          <p class="section-kicker">Deployment</p>
+          <h2>Published by GitHub Pages, deployable to AWS Lambda</h2>
+          <p>
+            This docs site is published from the <code>docs/</code> directory via GitHub
+            Actions. The API itself deploys with SAM as a container image and includes a
+            smoke test step after deployment.
+          </p>
+        </div>
+        <a class="button button-secondary" href="./api/">Browse the API reference</a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-width footer-row">
+        <p>folio documentation</p>
+        <p>Published from <code>docs/</code> with GitHub Pages</p>
+      </div>
+    </footer>
+  </body>
+</html>
