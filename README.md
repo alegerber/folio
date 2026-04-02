@@ -51,6 +51,8 @@ Presigned URLs in the response use `http://localhost:9000` and are directly open
 
 ## API
 
+When `API_KEY` is set, every endpoint requires the `X-Api-Key` header, including `/health` and `/metrics`.
+
 ### `GET /health`
 
 Returns service liveness. Also responds to `HEAD /health`.

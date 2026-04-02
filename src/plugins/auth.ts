@@ -7,11 +7,7 @@ export const authPlugin = fp(async (fastify) => {
 
   const expected = Buffer.from(env.API_KEY);
 
-  const PUBLIC_PATHS = new Set(['/health', '/metrics']);
-
   fastify.addHook('onRequest', async (request, reply) => {
-    if (PUBLIC_PATHS.has(request.url)) return;
-
     const key = request.headers['x-api-key'];
     const provided = Buffer.from(typeof key === 'string' ? key : '');
 

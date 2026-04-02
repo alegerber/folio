@@ -69,10 +69,10 @@ echo ""
 # ── GET /health ───────────────────────────────────────────────────────────────
 
 echo "--- GET /health ---"
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/health")
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}" "$BASE/health")
 assert_eq "HTTP 200" "200" "$STATUS"
 
-BODY=$(curl -s "$BASE/health")
+BODY=$(curl -s "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}" "$BASE/health")
 assert_contains "body contains status:ok" '"status":"ok"' "$BODY"
 
 echo ""
@@ -80,10 +80,10 @@ echo ""
 # ── GET /metrics (baseline) ───────────────────────────────────────────────────
 
 echo "--- GET /metrics ---"
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/metrics")
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}" "$BASE/metrics")
 assert_eq "HTTP 200" "200" "$STATUS"
 
-METRICS=$(curl -s "$BASE/metrics")
+METRICS=$(curl -s "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}" "$BASE/metrics")
 assert_contains "duration histogram present" "pdf_generation_duration_ms_bucket" "$METRICS"
 assert_contains "size histogram present"     "pdf_size_bytes_bucket"             "$METRICS"
 assert_contains "requests counter present"   "pdf_generation_requests_total"     "$METRICS"
@@ -93,6 +93,14 @@ echo ""
 # ── Auth: 401 when API_KEY is configured and header is missing ────────────────
 
 if [ -n "${API_KEY:-}" ]; then
+  echo "--- Auth: missing x-api-key on GET /health → 401 ---"
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/health")
+  assert_eq "HTTP 401 (health, no key)" "401" "$HTTP_CODE"
+
+  echo "--- Auth: missing x-api-key on GET /metrics → 401 ---"
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/metrics")
+  assert_eq "HTTP 401 (metrics, no key)" "401" "$HTTP_CODE"
+
   echo "--- Auth: missing x-api-key → 401 ---"
   HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/pdf/generate" \
     -H "Content-Type: application/json" \
@@ -337,7 +345,7 @@ echo ""
 # ── GET /metrics (after requests) ────────────────────────────────────────────
 
 echo "--- GET /metrics (after generation) ---"
-METRICS=$(curl -s "$BASE/metrics")
+METRICS=$(curl -s "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}" "$BASE/metrics")
 assert_contains "success counter incremented" 'pdf_generation_requests_total{status="success"}' "$METRICS"
 
 echo ""
