@@ -1,5 +1,5 @@
 # Stage 1: build
-FROM node:24-slim AS builder
+FROM node:22-slim AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -8,7 +8,7 @@ COPY src/ src/
 RUN npm run build
 
 # Stage 2: production (Lambda base image includes the Runtime Interface Emulator)
-FROM public.ecr.aws/lambda/nodejs:24
+FROM public.ecr.aws/lambda/nodejs:22
 WORKDIR /var/task
 RUN dnf install -y \
       alsa-lib \
