@@ -40,7 +40,8 @@ jobs:
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --parameter-overrides \
-              "S3BucketName=${{ secrets.S3_BUCKET_NAME }}"
+              "S3BucketName=${{ secrets.S3_BUCKET_NAME }}" \
+              "ApiKey=/folio/api-key"
 
       - name: Get API URL
         id: api-url
