@@ -39,13 +39,11 @@ export async function buildApp() {
   await fastify.register(metricsRoutes, { metricsService });
 
   fastify.addHook('onReady', async () => {
-    // Warm up the browser on startup to reduce first-request latency
-    try {
-      await pdfService.getBrowser();
-      fastify.log.info('Browser warmed up successfully');
-    } catch (err) {
-      fastify.log.warn({ err }, 'Failed to warm up browser — will retry on first request');
-    }
+    // Warm up the browser in the background — don't block the hook since
+    // Chromium startup (~7s) can exceed Fastify's onReady timeout.
+    pdfService.getBrowser()
+      .then(() => fastify.log.info('Browser warmed up successfully'))
+      .catch((err) => fastify.log.warn({ err }, 'Failed to warm up browser — will retry on first request'));
   });
 
   fastify.addHook('onClose', async () => {
