@@ -57,6 +57,7 @@ PDF_BUCKET=""
 AWS_ACCOUNT_ID=""
 GITHUB_ORG_REPO=""
 API_KEY_VALUE=""
+API_KEY_PARAMETER_NAME="/folio/api-key"
 
 pick_aws_profile() {
   # List profiles from ~/.aws/config (strips the "profile " prefix)
@@ -128,6 +129,7 @@ prompt_config() {
   printf '  %-24s %s\n' "ECR repository:"      "$ECR_REPOSITORY"
   printf '  %-24s %s\n' "PDF S3 bucket:"       "$PDF_BUCKET"
   printf '  %-24s %s\n' "SAM artifact bucket:" "$SAM_ARTIFACT_BUCKET"
+  printf '  %-24s %s\n' "SSM API key param:"   "$API_KEY_PARAMETER_NAME"
   printf '  %-24s %s\n' "API key:"             "${API_KEY_VALUE:+(set)}"
   echo
 
@@ -274,6 +276,12 @@ JSON
       }
     },
     {
+      "Sid": "SsmParameters",
+      "Effect": "Allow",
+      "Action": ["ssm:GetParameter", "ssm:GetParameters"],
+      "Resource": "arn:aws:ssm:${REGION}:${AWS_ACCOUNT_ID}:parameter/*"
+    },
+    {
       "Sid": "ApiGateway",
       "Effect": "Allow",
       "Action": "apigateway:*",
@@ -285,6 +293,26 @@ JSON
 )"
 
   success "Deploy policy attached"
+}
+
+# ── SSM Parameters ────────────────────────────────────────────────────────────
+
+setup_api_key_parameter() {
+  info "SSM API key parameter..."
+
+  if [ -z "$API_KEY_VALUE" ]; then
+    warn "No API key provided — skipping ${API_KEY_PARAMETER_NAME}. SAM deploy expects this parameter to exist."
+    return
+  fi
+
+  aws ssm put-parameter \
+    --name "$API_KEY_PARAMETER_NAME" \
+    --type SecureString \
+    --value "$API_KEY_VALUE" \
+    --overwrite \
+    >/dev/null
+
+  success "SSM parameter ${API_KEY_PARAMETER_NAME} created/updated"
 }
 
 # ── S3 Buckets ────────────────────────────────────────────────────────────────
@@ -371,6 +399,7 @@ configure_secrets() {
   printf '  %-24s %s\n' "ECR_REPOSITORY"      "$ECR_REPOSITORY"
   printf '  %-24s %s\n' "S3_BUCKET_NAME"      "$PDF_BUCKET"
   printf '  %-24s %s\n' "SAM_ARTIFACT_BUCKET" "$SAM_ARTIFACT_BUCKET"
+  printf '  %-24s %s\n' "SSM parameter"       "$API_KEY_PARAMETER_NAME"
   printf '  %-24s %s\n' "API_KEY"             "${API_KEY_VALUE:+(set)}"
   echo
 
@@ -405,6 +434,7 @@ main() {
   echo
   setup_oidc
   setup_deploy_role
+  setup_api_key_parameter
   setup_buckets
   setup_ecr
   configure_secrets

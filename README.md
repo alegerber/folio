@@ -425,17 +425,18 @@ test/integration/
 Deploys as a container image to AWS Lambda via GitHub Actions.
 
 - **Every PR:** typecheck → lint → tests → Docker build check (parallel)
-- **Merge to `main`:** build → push to ECR → `aws lambda update-function-code` → smoke test
+- **Merge to `main`:** `sam build` → `sam deploy` → smoke test
 
-Auth uses GitHub Actions OIDC → AWS STS. Required secrets: `AWS_ACCOUNT_ID`, `ECR_REPOSITORY`, `LAMBDA_FUNCTION_NAME`, `API_GATEWAY_URL`.
+Auth uses GitHub Actions OIDC → AWS STS. Required secrets: `AWS_ACCOUNT_ID`, `ECR_REPOSITORY`, `S3_BUCKET_NAME`, `SAM_ARTIFACT_BUCKET`, `API_KEY`.
+The SAM template resolves the runtime API key from the SSM SecureString parameter `/folio/api-key`, so the deploy role also needs `ssm:GetParameter` / `ssm:GetParameters` and that parameter must exist before CI deploys.
+`./scripts/aws-setup.sh` bootstraps the OIDC provider, deploy role, buckets, ECR repository, and `/folio/api-key`.
 
 **Recommended Lambda configuration**
 
 | Setting | Value |
 |---|---|
 | Memory | 2048 MB |
-| Timeout | 30 s |
-| Ephemeral storage | 1024 MB |
+| Timeout | 120 s |
 | Architecture | x86_64 |
 | Package type | Image |
 
