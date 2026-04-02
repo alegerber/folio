@@ -11,11 +11,10 @@ Parameters:
     Description: Existing S3 bucket used for PDF storage
 
   ApiKey:
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /folio/api-key
-    Description: >
-      SSM parameter path for the x-api-key authentication value.
-      Create it with: aws ssm put-parameter --name /folio/api-key --type SecureString --value <KEY>
+    Type: String
+    NoEcho: true
+    MinLength: 32
+    Description: x-api-key authentication value
 
   LogLevel:
     Type: String

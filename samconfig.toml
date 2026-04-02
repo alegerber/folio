@@ -1,10 +1,11 @@
 # SAM configuration for local deployments.
 # In CI the values below are passed as CLI flags — see .github/workflows/deploy.yml.
 #
-# Before running `sam deploy` locally, fill in the three placeholders:
+# Before running `sam deploy` locally, fill in the four placeholders:
 #   ACCOUNT_ID   — your 12-digit AWS account ID
 #   ECR_REPO     — ECR repository name (e.g. folio)
 #   PDF_BUCKET   — S3 bucket for PDF storage
+#   API_KEY      — a 32+ character API key for authenticated routes
 
 version = 0.1
 
@@ -20,4 +21,4 @@ confirm_changeset = true
 
 image_repositories  = ["FolioFunction=592673560030.dkr.ecr.eu-central-1.amazonaws.com/folio"]
 s3_bucket           = "folio-sam-592673560030"
-parameter_overrides = "S3BucketName=folio-pdfs-592673560030 ApiKey=/folio/api-key"
+parameter_overrides = "S3BucketName=folio-pdfs-592673560030 ApiKey=REPLACE_WITH_A_32_CHARACTER_API_KEY"

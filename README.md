@@ -430,8 +430,8 @@ Deploys as a container image to AWS Lambda via GitHub Actions.
 - **Merge to `main`:** `sam build` → `sam deploy` → smoke test
 
 Auth uses GitHub Actions OIDC → AWS STS. Required secrets: `AWS_ACCOUNT_ID`, `ECR_REPOSITORY`, `S3_BUCKET_NAME`, `SAM_ARTIFACT_BUCKET`, `API_KEY`.
-The SAM template resolves the runtime API key from the SSM SecureString parameter `/folio/api-key`, so the deploy role also needs `ssm:GetParameter` / `ssm:GetParameters` and that parameter must exist before CI deploys.
-`./scripts/aws-setup.sh` bootstraps the OIDC provider, deploy role, buckets, ECR repository, and `/folio/api-key`.
+The SAM template takes the runtime API key as a `NoEcho` deployment parameter, and GitHub Actions passes it from the `API_KEY` repository secret.
+`./scripts/aws-setup.sh` bootstraps the OIDC provider, deploy role, buckets, ECR repository, and GitHub secrets.
 
 If deploys fail with `DELETE_FAILED`, the existing CloudFormation stack must be cleaned up before `sam deploy` can update it:
 
