@@ -1,8 +1,16 @@
 {
-  "name": "pdf-microservice",
+  "name": "folio",
   "version": "1.0.0",
   "description": "PDF generation microservice using Puppeteer, Fastify, and S3",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alegerber/folio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alegerber/folio/issues"
+  },
+  "homepage": "https://github.com/alegerber/folio#readme",
   "main": "dist/local.js",
   "scripts": {
     "build": "esbuild src/local.ts src/lambda.ts --bundle --platform=node --target=node24 --outdir=dist --external:@sparticuz/chromium --external:pino --external:pino-pretty --format=cjs",

@@ -1,5 +1,7 @@
 # folio
 
+[![License: MIT](https://img.shields.io/github/license/alegerber/folio)](LICENSE)
+
 Serverless-native PDF API. HTML → PDF on AWS Lambda, S3-first. TypeScript, Fastify, headless Chromium.
 
 The same container image runs on **AWS Lambda** or plain **Docker** without modification. PDF bytes go straight to S3 — no shared filesystem, no ephemeral `/tmp` issues.
@@ -50,7 +52,19 @@ The GitHub Pages site is published from [`docs/`](docs/) and includes the full A
 
 - [Documentation landing page](docs/index.html)
 - [API reference](docs/api/index.html)
+- [Contributing guide](CONTRIBUTING.md)
 - [GitHub Pages workflow](.github/workflows/pages.yml)
+
+## Container images
+
+Prebuilt images are published to GitHub Container Registry from semver tags like `v1.2.3`.
+
+```bash
+docker pull ghcr.io/alegerber/folio:latest
+docker pull ghcr.io/alegerber/folio:latest-full
+```
+
+Each release publishes `latest`, `x.y.z`, and `x.y` tags. Matching `-full` tags are also published so downstream deploys can adopt the long-lived tag shape now; they currently mirror the main image until the larger Docker-only conversion toolchain lands.
 
 ## Local development
 
@@ -81,10 +95,6 @@ npm install
 # Requires real AWS credentials and S3_BUCKET set in your environment
 npm run dev
 ```
-
-## Scripts
-
----
 
 ## Authentication
 
@@ -226,8 +236,14 @@ If deletion fails again, inspect the event log for the specific resource blockin
 Build the image and run anywhere Docker is supported:
 
 ```bash
-docker build -t pdf-microservice .
-docker run -p 8080:8080 --env-file .env pdf-microservice
+docker build -t folio .
+docker run -p 8080:8080 --env-file .env folio
+```
+
+Published images are also available from GHCR:
+
+```bash
+docker run -p 8080:8080 --env-file .env ghcr.io/alegerber/folio:latest
 ```
 
 ---
@@ -236,7 +252,7 @@ docker run -p 8080:8080 --env-file .env pdf-microservice
 
 See [`.plans/PLAN.md`](.plans/PLAN.md) for the full feature roadmap.
 
-Planned features (in order): URL rendering → Screenshot API → OpenAPI docs → LibreOffice conversion → Async webhooks → Queue-based scaling → Open-source publishing (GHCR image, release automation).
+Release automation and GHCR publishing are in place. Planned features (in order): URL rendering → Screenshot API → OpenAPI docs → LibreOffice conversion → Async webhooks → Queue-based scaling.
 
 ---
 
@@ -253,3 +269,11 @@ Planned features (in order): URL rendering → Screenshot API → OpenAPI docs �
 | Testing | Vitest | 4.x |
 | Build | esbuild | 0.27.x |
 | Runtime | Node.js | 24 |
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup, Conventional Commits, PR expectations, and route patterns.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
