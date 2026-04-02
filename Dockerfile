@@ -35,8 +35,6 @@ COPY --from=builder /app/dist ./dist
 COPY package*.json ./
 RUN npm install --omit=dev
 
-ENV CHROMIUM_PATH=/var/task/node_modules/@sparticuz/chromium/bin/chromium
-
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
