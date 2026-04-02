@@ -433,6 +433,15 @@ Auth uses GitHub Actions OIDC → AWS STS. Required secrets: `AWS_ACCOUNT_ID`, `
 The SAM template resolves the runtime API key from the SSM SecureString parameter `/folio/api-key`, so the deploy role also needs `ssm:GetParameter` / `ssm:GetParameters` and that parameter must exist before CI deploys.
 `./scripts/aws-setup.sh` bootstraps the OIDC provider, deploy role, buckets, ECR repository, and `/folio/api-key`.
 
+If deploys fail with `DELETE_FAILED`, the existing CloudFormation stack must be cleaned up before `sam deploy` can update it:
+
+```bash
+aws cloudformation describe-stack-events --stack-name folio --region eu-central-1
+aws cloudformation delete-stack --stack-name folio --region eu-central-1
+```
+
+If deletion fails again, inspect the event log for the specific resource blocking cleanup.
+
 **Recommended Lambda configuration**
 
 | Setting | Value |
