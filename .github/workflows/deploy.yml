@@ -29,22 +29,6 @@ jobs:
       - name: SAM build
         run: sam build
 
-      - name: Check stack status
-        run: |
-          STATUS=$(aws cloudformation describe-stacks \
-            --stack-name folio \
-            --region eu-central-1 \
-            --query 'Stacks[0].StackStatus' \
-            --output text 2>/dev/null || true)
-
-          if [ "$STATUS" = "DELETE_FAILED" ]; then
-            echo "CloudFormation stack 'folio' is in DELETE_FAILED and cannot be updated."
-            echo "Recover it first, then rerun deploy:"
-            echo "  aws cloudformation describe-stack-events --stack-name folio --region eu-central-1"
-            echo "  aws cloudformation delete-stack --stack-name folio --region eu-central-1"
-            exit 1
-          fi
-
       - name: SAM deploy
         run: |
           sam deploy \
