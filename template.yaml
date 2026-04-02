@@ -11,12 +11,11 @@ Parameters:
     Description: Existing S3 bucket used for PDF storage
 
   ApiKey:
-    Type: String
-    NoEcho: true
-    Default: ""
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /folio/api-key
     Description: >
-      Optional API key for x-api-key authentication (min 32 chars).
-      Leave blank to disable authentication.
+      SSM parameter path for the x-api-key authentication value.
+      Create it with: aws ssm put-parameter --name /folio/api-key --type SecureString --value <KEY>
 
   LogLevel:
     Type: String
@@ -26,11 +25,6 @@ Parameters:
   SignedUrlExpirySeconds:
     Type: Number
     Default: 3600
-
-# ── Conditions ────────────────────────────────────────────────────────────────
-
-Conditions:
-  HasApiKey: !Not [!Equals [!Ref ApiKey, ""]]
 
 # ── Globals ───────────────────────────────────────────────────────────────────
 
@@ -45,7 +39,7 @@ Globals:
         GHOSTSCRIPT_PATH:           /usr/bin/gs
         LOG_LEVEL:                  !Ref LogLevel
         SIGNED_URL_EXPIRY_SECONDS:  !Ref SignedUrlExpirySeconds
-        API_KEY:                    !If [HasApiKey, !Ref ApiKey, !Ref AWS::NoValue]
+        API_KEY:                    !Ref ApiKey
 
 # ── Resources ─────────────────────────────────────────────────────────────────
 

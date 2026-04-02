@@ -20,4 +20,5 @@ confirm_changeset = true
 
 image_repositories  = ["FolioFunction=592673560030.dkr.ecr.eu-central-1.amazonaws.com/folio"]
 s3_bucket           = "folio-sam-592673560030"
-parameter_overrides = "S3BucketName=folio-pdfs-592673560030 ApiKey=tGXGJQ5tF3xsnVdp2W9u6SJ2r2JLaqW4"
+parameter_overrides = "S3BucketName=folio-pdfs-592673560030"
+# ApiKey is read from SSM Parameter Store (/folio/api-key) at deploy time — no need to pass it here.
