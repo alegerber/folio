@@ -3,7 +3,9 @@ import { buildApp } from './server.js';
 
 // buildApp() is called at module level (outside the handler) so the browser
 // is launched once and reused across warm invocations.
-const proxyPromise = buildApp().then((app) => awsLambdaFastify(app));
+const proxyPromise = buildApp().then((app) =>
+  awsLambdaFastify(app, { binaryMimeTypes: ['application/pdf'] }),
+);
 
 export const handler = async (event: unknown, context: unknown) => {
   const proxy = await proxyPromise;

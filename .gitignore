@@ -38,3 +38,7 @@ Thumbs.db
 
 # AWS
 .aws-sam
+
+
+# Other
+output.pdf
