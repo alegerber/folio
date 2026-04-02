@@ -4,27 +4,19 @@ Serverless-native PDF API. HTML → PDF on AWS Lambda, S3-first. TypeScript, Fas
 
 The same container image runs on **AWS Lambda** or plain **Docker** without modification. PDF bytes go straight to S3 — no shared filesystem, no ephemeral `/tmp` issues.
 
-> Looking for a self-hosted Docker-only solution? Check out [Gotenberg](https://gotenberg.dev/).
-> Folio is built for teams already on AWS who want a PDF service that fits their existing infrastructure.
+Folio is built for teams already on AWS who want a PDF service that fits their existing infrastructure.
 
 ---
 
-## What makes folio different
+## What folio includes
 
-| | folio | Gotenberg |
-|---|---|---|
-| AWS Lambda support | ✅ | ❌ |
-| S3 upload + presigned URL | ✅ | ❌ |
-| API key auth | ✅ | ❌ |
-| OpenAPI docs | Planned | ❌ |
-| HTML → PDF | ✅ | ✅ |
-| URL → PDF | Planned | ✅ |
-| Screenshot (PNG/JPEG) | Planned | ✅ |
-| DOCX / XLSX → PDF | Planned (Docker only) | ✅ |
-| PDF merge | ✅ | ✅ |
-| PDF split / compress / PDF/A | ✅ | ✅ |
-| Prometheus metrics | ✅ | ✅ |
-| Language | TypeScript | Go |
+- AWS Lambda and plain Docker support from the same container image
+- S3 upload plus presigned URL responses
+- API key authentication
+- HTML to PDF generation with CSS, headers, and footers
+- PDF merge, split, compress, and PDF/A routes
+- Prometheus-style metrics
+- Planned URL rendering, screenshots, OpenAPI docs, and document conversion
 
 ---
 
@@ -468,7 +460,7 @@ docker run -p 8080:8080 --env-file .env pdf-microservice
 
 ## Roadmap
 
-See [`.plans/PLAN.md`](.plans/PLAN.md) for the full feature roadmap and Gotenberg comparison.
+See [`.plans/PLAN.md`](.plans/PLAN.md) for the full feature roadmap.
 
 Planned features (in order): URL rendering → Screenshot API → OpenAPI docs → LibreOffice conversion → Async webhooks → Queue-based scaling → Open-source publishing (GHCR image, release automation).
 
