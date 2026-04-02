@@ -50,12 +50,12 @@ extract_id() {
   echo "$1" | sed 's|.*pdfs/\([^.]*\)\.pdf.*|\1|'
 }
 
-# Build auth header args for curl; empty if no API_KEY set
-auth_header() {
-  if [ -n "${API_KEY:-}" ]; then
-    echo "-H" "x-api-key: $API_KEY"
-  fi
-}
+# Auth header args for curl — used as "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}" 
+# Must be an array; command substitution $(func) word-splits the header value.
+AUTH_HEADER=()
+if [ -n "${API_KEY:-}" ]; then
+  AUTH_HEADER=(-H "x-api-key: $API_KEY")
+fi
 
 echo "=== PDF Microservice Smoke Test ==="
 echo "Base URL: $BASE"
@@ -113,7 +113,7 @@ fi
 
 echo "--- POST /pdf/generate (stream: false) ---"
 RESP=$(curl -s -X POST "$BASE/pdf/generate" \
-  $(auth_header) \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
   -H "Content-Type: application/json" \
   -d '{
     "html": "<html><body><h1>Smoke Test Page 1</h1></body></html>",
@@ -137,7 +137,7 @@ echo ""
 echo "--- POST /pdf/generate (stream: true) ---"
 TMP_PDF=$(mktemp /tmp/smoke-test-XXXXXX.pdf)
 HTTP_CODE=$(curl -s -X POST "$BASE/pdf/generate" \
-  $(auth_header) \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
   -H "Content-Type: application/json" \
   -d '{"html": "<html><body><h1>Smoke Test Page 2</h1></body></html>", "stream": true}' \
   -o "$TMP_PDF" -w "%{http_code}")
@@ -158,7 +158,7 @@ echo ""
 # Generate a second PDF for merge/delete tests
 echo "--- POST /pdf/generate (second PDF for merge) ---"
 RESP2=$(curl -s -X POST "$BASE/pdf/generate" \
-  $(auth_header) \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
   -H "Content-Type: application/json" \
   -d '{"html": "<html><body><h1>Smoke Test Page 2</h1></body></html>"}')
 URL2=$(echo "$RESP2" | sed 's/.*"url":"\([^"]*\)".*/\1/')
@@ -171,7 +171,7 @@ echo ""
 # ── GET /pdf/:id ──────────────────────────────────────────────────────────────
 
 echo "--- GET /pdf/:id ---"
-RESP=$(curl -s $(auth_header) "$BASE/pdf/$ID1")
+RESP=$(curl -s "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  "$BASE/pdf/$ID1")
 STATUS_CODE=$(echo "$RESP" | grep -o '"statusCode":[0-9]*' | grep -o '[0-9]*')
 assert_eq "statusCode 200" "200" "$STATUS_CODE"
 assert_contains "response contains url" '"url"' "$RESP"
@@ -181,7 +181,7 @@ echo ""
 # ── GET /pdf/:id with invalid UUID ───────────────────────────────────────────
 
 echo "--- GET /pdf/:id (invalid UUID → 400) ---"
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $(auth_header) "$BASE/pdf/not-a-uuid")
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  "$BASE/pdf/not-a-uuid")
 assert_eq "HTTP 400" "400" "$HTTP_CODE"
 
 echo ""
@@ -190,7 +190,7 @@ echo ""
 
 echo "--- POST /pdf/merge (stream: false) ---"
 RESP=$(curl -s -X POST "$BASE/pdf/merge" \
-  $(auth_header) \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
   -H "Content-Type: application/json" \
   -d "{\"ids\": [\"$ID1\", \"$ID2\"]}")
 STATUS_CODE=$(echo "$RESP" | grep -o '"statusCode":[0-9]*' | grep -o '[0-9]*')
@@ -204,7 +204,7 @@ echo ""
 echo "--- POST /pdf/merge (stream: true) ---"
 TMP_MERGED=$(mktemp /tmp/smoke-test-merged-XXXXXX.pdf)
 HTTP_CODE=$(curl -s -X POST "$BASE/pdf/merge" \
-  $(auth_header) \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
   -H "Content-Type: application/json" \
   -d "{\"ids\": [\"$ID1\", \"$ID2\"], \"stream\": true}" \
   -o "$TMP_MERGED" -w "%{http_code}")
@@ -224,7 +224,7 @@ echo ""
 
 echo "--- POST /pdf/merge (< 2 ids → 400) ---"
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/pdf/merge" \
-  $(auth_header) \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
   -H "Content-Type: application/json" \
   -d "{\"ids\": [\"$ID1\"]}")
 assert_eq "HTTP 400" "400" "$HTTP_CODE"
@@ -236,7 +236,7 @@ echo ""
 echo "--- POST /pdf/split (stream: true) ---"
 TMP_SPLIT=$(mktemp /tmp/smoke-test-split-XXXXXX.pdf)
 HTTP_CODE=$(curl -s -X POST "$BASE/pdf/split" \
-  $(auth_header) \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
   -H "Content-Type: application/json" \
   -d "{\"id\": \"$ID1\", \"pages\": \"1\", \"stream\": true}" \
   -o "$TMP_SPLIT" -w "%{http_code}")
@@ -256,7 +256,7 @@ echo ""
 
 echo "--- POST /pdf/split (stream: false) ---"
 RESP=$(curl -s -X POST "$BASE/pdf/split" \
-  $(auth_header) \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
   -H "Content-Type: application/json" \
   -d "{\"id\": \"$ID1\", \"pages\": \"1\"}")
 STATUS_CODE=$(echo "$RESP" | grep -o '"statusCode":[0-9]*' | grep -o '[0-9]*')
@@ -269,7 +269,7 @@ echo ""
 
 echo "--- POST /pdf/split (missing pages → 400) ---"
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/pdf/split" \
-  $(auth_header) \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
   -H "Content-Type: application/json" \
   -d "{\"id\": \"$ID1\"}")
 assert_eq "HTTP 400" "400" "$HTTP_CODE"
@@ -281,7 +281,7 @@ echo ""
 echo "--- POST /pdf/compress (stream: true) ---"
 TMP_COMPRESSED=$(mktemp /tmp/smoke-test-compressed-XXXXXX.pdf)
 HTTP_CODE=$(curl -s -X POST "$BASE/pdf/compress" \
-  $(auth_header) \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
   -H "Content-Type: application/json" \
   -d "{\"id\": \"$ID1\", \"stream\": true}" \
   -o "$TMP_COMPRESSED" -w "%{http_code}")
@@ -303,7 +303,7 @@ if [ -n "${GHOSTSCRIPT_PATH:-}" ]; then
   echo "--- POST /pdf/pdfa (stream: true) ---"
   TMP_PDFA=$(mktemp /tmp/smoke-test-pdfa-XXXXXX.pdf)
   HTTP_CODE=$(curl -s -X POST "$BASE/pdf/pdfa" \
-    $(auth_header) \
+    "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
     -H "Content-Type: application/json" \
     -d "{\"id\": \"$ID1\", \"conformance\": \"2b\", \"stream\": true}" \
     -o "$TMP_PDFA" -w "%{http_code}")
@@ -326,10 +326,10 @@ fi
 # ── DELETE /pdf/:id ───────────────────────────────────────────────────────────
 
 echo "--- DELETE /pdf/:id ---"
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE $(auth_header) "$BASE/pdf/$ID1")
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  "$BASE/pdf/$ID1")
 assert_eq "HTTP 204" "204" "$HTTP_CODE"
 
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE $(auth_header) "$BASE/pdf/$ID2")
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  "$BASE/pdf/$ID2")
 assert_eq "HTTP 204 (second delete)" "204" "$HTTP_CODE"
 
 echo ""
