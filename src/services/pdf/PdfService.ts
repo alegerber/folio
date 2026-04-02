@@ -10,23 +10,25 @@ const PAPER_SIZES: Record<string, { width: string; height: string }> = {
 };
 
 export class PdfService {
-  private browser: Browser | null = null;
+  private browserPromise: Promise<Browser> | null = null;
 
   async getBrowser(): Promise<Browser> {
-    if (this.browser) {
-      return this.browser;
+    if (!this.browserPromise) {
+      this.browserPromise = this._launch();
     }
+    return this.browserPromise;
+  }
+
+  private async _launch(): Promise<Browser> {
     // Dynamic import to allow mocking in tests
     const puppeteer = await import('puppeteer-core');
     const chromium = await import('@sparticuz/chromium');
 
-    this.browser = await puppeteer.default.launch({
+    return puppeteer.default.launch({
       args: chromium.default.args.filter((arg: string) => !arg.startsWith('--headless')),
       executablePath: await chromium.default.executablePath(),
       headless: true,
     });
-
-    return this.browser;
   }
 
   async generate(
@@ -86,9 +88,10 @@ export class PdfService {
   }
 
   async close(): Promise<void> {
-    if (this.browser) {
-      await this.browser.close();
-      this.browser = null;
+    if (this.browserPromise) {
+      const browser = await this.browserPromise;
+      this.browserPromise = null;
+      await browser.close();
     }
   }
 }
