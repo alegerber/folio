@@ -38,6 +38,7 @@ Thumbs.db
 
 # AWS
 .aws-sam
+samconfig.toml
 
 
 # Other

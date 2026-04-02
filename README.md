@@ -34,6 +34,9 @@ The same container image runs on **AWS Lambda** or plain **Docker** without modi
 # Copy and edit environment variables
 cp .env.example .env
 
+# Optional: local SAM deploy config
+cp samconfig.example.toml samconfig.toml
+
 # Start API + MinIO (local S3)
 docker compose up
 
@@ -432,6 +435,8 @@ Deploys as a container image to AWS Lambda via GitHub Actions.
 Auth uses GitHub Actions OIDC → AWS STS. Required secrets: `AWS_ACCOUNT_ID`, `ECR_REPOSITORY`, `S3_BUCKET_NAME`, `SAM_ARTIFACT_BUCKET`, `API_KEY`.
 The SAM template takes the runtime API key as a `NoEcho` deployment parameter, and GitHub Actions passes it from the `API_KEY` repository secret.
 `./scripts/aws-setup.sh` bootstraps the OIDC provider, deploy role, buckets, ECR repository, and GitHub secrets.
+
+For local SAM deploys, copy `samconfig.example.toml` to `samconfig.toml` and fill in the placeholders.
 
 If deploys fail with `DELETE_FAILED`, the existing CloudFormation stack must be cleaned up before `sam deploy` can update it:
 

@@ -415,8 +415,9 @@ main() {
   echo "  Push to main and the GitHub Actions workflow will run sam deploy."
   echo
   printf '%sLocal deployment%s\n' "$bold" "$reset"
-  echo "  1. Fill in the placeholders in samconfig.toml"
-  echo "  2. sam build && sam deploy"
+  echo "  1. cp samconfig.example.toml samconfig.toml"
+  echo "  2. Fill in the placeholders in samconfig.toml"
+  echo "  3. sam build && sam deploy"
   echo
 }
 
