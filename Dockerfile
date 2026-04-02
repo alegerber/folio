@@ -7,8 +7,8 @@ COPY tsconfig.json .
 COPY src/ src/
 RUN npm run build
 
-# Stage 2: production (Lambda base image includes the Runtime Interface Emulator)
-FROM public.ecr.aws/lambda/nodejs:24
+# Stage 2: production image used by local Docker, Lambda deploys, and GHCR
+FROM public.ecr.aws/lambda/nodejs:24 AS server
 WORKDIR /var/task
 RUN dnf install -y \
       alsa-lib \
@@ -40,3 +40,8 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["dist/lambda.handler"]
+
+# Reserved for the larger Docker-only toolchain. Keeping this target stable now
+# lets the publish workflow ship predictable `-full` tags before LibreOffice
+# conversion lands.
+FROM server AS server-full

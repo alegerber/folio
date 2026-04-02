@@ -318,6 +318,7 @@ Planned features are documented in `.plans/`. See [`.plans/PLAN.md`](.plans/PLAN
 | `observability.md` | `GET /health`, `GET /metrics`, PDF generation histograms |
 | `additional-routes.md` | `GET /pdf/:id`, `DELETE /pdf/:id`, `POST /pdf/merge` |
 | `pdf-operations.md` | `POST /pdf/split`, `/pdf/compress`, `/pdf/pdfa` |
+| `open-source-publishing.md` | MIT license, GHCR image publishing, release-please, CONTRIBUTING |
 
 ### Planned — Gotenberg feature parity
 
@@ -336,4 +337,3 @@ Planned features are documented in `.plans/`. See [`.plans/PLAN.md`](.plans/PLAN
 | `node-server-deployment.md` | ECS Fargate / Fly.io plain Node server Docker stage |
 | `async-webhook.md` | `202 Accepted` + webhook callback for slow jobs |
 | `queue-based-scaling.md` | SQS / BullMQ decoupled worker tier |
-| `open-source-publishing.md` | LICENSE, GHCR image publishing, release-please, CONTRIBUTING |
