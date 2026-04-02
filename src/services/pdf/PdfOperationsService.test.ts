@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EventEmitter } from 'events';
 import { PDFDocument } from 'pdf-lib';
-import { parsePageRange, PdfOperationsService } from './PdfOperationsService.js';
+import {
+  InvalidPageRangeError,
+  parsePageRange,
+  PdfOperationsService,
+} from './PdfOperationsService.js';
 
 vi.mock('child_process', () => ({ spawn: vi.fn() }));
 vi.mock('fs/promises', () => ({
@@ -12,9 +16,15 @@ vi.mock('fs/promises', () => ({
 
 import { spawn } from 'child_process';
 
-function makeGsProcess(exitCode = 0) {
-  const proc = new EventEmitter() as NodeJS.EventEmitter & { stderr: NodeJS.EventEmitter };
-  (proc as any).stderr = new EventEmitter();
+type MockGsProcess = EventEmitter & { stderr: EventEmitter };
+
+function asSpawnReturn(proc: MockGsProcess): ReturnType<typeof spawn> {
+  return proc as unknown as ReturnType<typeof spawn>;
+}
+
+function makeGsProcess(exitCode = 0): MockGsProcess {
+  const proc = new EventEmitter() as MockGsProcess;
+  proc.stderr = new EventEmitter();
   setImmediate(() => proc.emit('close', exitCode));
   return proc;
 }
@@ -49,6 +59,18 @@ describe('parsePageRange', () => {
   it('deduplicates overlapping selections', () => {
     expect(parsePageRange('1-3,2-4', 5)).toEqual([0, 1, 2, 3]);
   });
+
+  it('throws for non-numeric segments', () => {
+    expect(() => parsePageRange('1,abc', 5)).toThrow(InvalidPageRangeError);
+  });
+
+  it('throws for descending ranges', () => {
+    expect(() => parsePageRange('3-1', 5)).toThrow('Page range cannot be descending');
+  });
+
+  it('throws for empty segments', () => {
+    expect(() => parsePageRange('1,,2', 5)).toThrow('Page range contains an empty segment');
+  });
 });
 
 describe('PdfOperationsService', () => {
@@ -76,7 +98,12 @@ describe('PdfOperationsService', () => {
 
     it('throws when page range produces no pages', async () => {
       const source = await makePdf(3);
-      await expect(service.split(source, '5')).rejects.toThrow('Page range produces no pages');
+      await expect(service.split(source, '5')).rejects.toThrow(InvalidPageRangeError);
+    });
+
+    it('throws when page range syntax is invalid', async () => {
+      const source = await makePdf(3);
+      await expect(service.split(source, 'abc')).rejects.toThrow(InvalidPageRangeError);
     });
   });
 
@@ -92,7 +119,7 @@ describe('PdfOperationsService', () => {
   describe('compress (Ghostscript)', () => {
     beforeEach(() => {
       service = new PdfOperationsService('/usr/bin/gs');
-      vi.mocked(spawn).mockReturnValue(makeGsProcess(0) as any);
+      vi.mocked(spawn).mockReturnValue(asSpawnReturn(makeGsProcess(0)));
     });
 
     it('calls Ghostscript with compress args', async () => {
@@ -106,7 +133,7 @@ describe('PdfOperationsService', () => {
     });
 
     it('throws when Ghostscript exits with non-zero code', async () => {
-      vi.mocked(spawn).mockReturnValue(makeGsProcess(1) as any);
+      vi.mocked(spawn).mockReturnValue(asSpawnReturn(makeGsProcess(1)));
       const source = await makePdf(1);
       await expect(service.compress(source)).rejects.toThrow('Ghostscript exited with code 1');
     });
@@ -120,7 +147,7 @@ describe('PdfOperationsService', () => {
 
     it('calls Ghostscript with PDF/A args', async () => {
       service = new PdfOperationsService('/usr/bin/gs');
-      vi.mocked(spawn).mockReturnValue(makeGsProcess(0) as any);
+      vi.mocked(spawn).mockReturnValue(asSpawnReturn(makeGsProcess(0)));
       const source = await makePdf(1);
       await service.convertToPdfA(source, '2b');
       expect(spawn).toHaveBeenCalledWith(
@@ -132,7 +159,7 @@ describe('PdfOperationsService', () => {
     it('uses the correct PDF/A level for each conformance', async () => {
       service = new PdfOperationsService('/usr/bin/gs');
       for (const [conf, level] of [['1b', 1], ['2b', 2], ['3b', 3]] as const) {
-        vi.mocked(spawn).mockReturnValue(makeGsProcess(0) as any);
+        vi.mocked(spawn).mockReturnValue(asSpawnReturn(makeGsProcess(0)));
         const source = await makePdf(1);
         await service.convertToPdfA(source, conf);
         expect(spawn).toHaveBeenCalledWith(

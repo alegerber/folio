@@ -14,7 +14,10 @@ export class PdfService {
 
   async getBrowser(): Promise<Browser> {
     if (!this.browserPromise) {
-      this.browserPromise = this._launch();
+      this.browserPromise = this._launch().catch((err: unknown) => {
+        this.browserPromise = null;
+        throw err;
+      });
     }
     return this.browserPromise;
   }
@@ -88,9 +91,12 @@ export class PdfService {
   }
 
   async close(): Promise<void> {
-    if (this.browserPromise) {
-      const browser = await this.browserPromise;
-      this.browserPromise = null;
+    const browserPromise = this.browserPromise;
+    this.browserPromise = null;
+
+    if (browserPromise) {
+      const browser = await browserPromise.catch(() => null);
+      if (!browser) return;
       await browser.close();
     }
   }

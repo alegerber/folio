@@ -26,7 +26,10 @@ vi.mock('../../src/services/storage/StorageService.js', () => ({
   StorageService: class {
     upload = vi
       .fn()
-      .mockResolvedValue('https://s3.amazonaws.com/test-bucket/pdfs/test.pdf?signed=true');
+      .mockResolvedValue({
+        id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+        url: 'https://s3.amazonaws.com/test-bucket/pdfs/test.pdf?signed=true',
+      });
   },
 }));
 

@@ -22,7 +22,7 @@ The same container image runs on **AWS Lambda** or plain **Docker** without modi
 | Screenshot (PNG/JPEG) | Planned | ✅ |
 | DOCX / XLSX → PDF | Planned (Docker only) | ✅ |
 | PDF merge | ✅ | ✅ |
-| PDF split / compress | Planned | ✅ |
+| PDF split / compress / PDF/A | ✅ | ✅ |
 | Prometheus metrics | ✅ | ✅ |
 | Language | TypeScript | Go |
 
@@ -116,7 +116,7 @@ Render HTML to PDF with headless Chromium.
 **Response — S3 URL**
 
 ```json
-{ "statusCode": 200, "data": { "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
+{ "statusCode": 200, "data": { "id": "550e8400-e29b-41d4-a716-446655440000", "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
 ```
 
 **Response — binary stream**
@@ -163,13 +163,13 @@ Merge two or more existing PDFs (by their IDs) into one document.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `ids` | UUID[] | yes | Ordered list of PDF IDs to merge (minimum 2) |
+| `ids` | UUID[] | yes | Ordered list of PDF IDs to merge (minimum 2, maximum 20) |
 | `stream` | boolean | no | `true` = binary response, `false` = S3 URL (default) |
 
 **Response — S3 URL (`stream: false`)**
 
 ```json
-{ "statusCode": 200, "data": { "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
+{ "statusCode": 200, "data": { "id": "550e8400-e29b-41d4-a716-446655440000", "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
 ```
 
 **Response — binary stream (`stream: true`)**
@@ -205,7 +205,7 @@ Extracts a subset of pages from an existing PDF.
 **Response — S3 URL (`stream: false`)**
 
 ```json
-{ "statusCode": 200, "data": { "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
+{ "statusCode": 200, "data": { "id": "550e8400-e29b-41d4-a716-446655440000", "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
 ```
 
 **Response — binary stream (`stream: true`)**
@@ -239,7 +239,7 @@ Reduces the file size of an existing PDF. Uses Ghostscript when `GHOSTSCRIPT_PAT
 **Response — S3 URL (`stream: false`)**
 
 ```json
-{ "statusCode": 200, "data": { "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
+{ "statusCode": 200, "data": { "id": "550e8400-e29b-41d4-a716-446655440000", "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
 ```
 
 **Response — binary stream (`stream: true`)**
@@ -275,7 +275,7 @@ Converts an existing PDF to PDF/A for long-term archival compliance. **Requires 
 **Response — S3 URL (`stream: false`)**
 
 ```json
-{ "statusCode": 200, "data": { "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
+{ "statusCode": 200, "data": { "id": "550e8400-e29b-41d4-a716-446655440000", "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
 ```
 
 **Response — binary stream (`stream: true`)**
@@ -406,7 +406,7 @@ src/
   routes/
     health/              # GET /health
     metrics/             # GET /metrics
-    pdf/                 # POST /pdf/generate, GET /pdf/:id, DELETE /pdf/:id, POST /pdf/merge
+    pdf/                 # POST /pdf/generate, GET/DELETE /pdf/:id, POST /pdf/merge, /pdf/split, /pdf/compress, /pdf/pdfa
   services/
     pdf/PdfService.ts               # Puppeteer browser lifecycle + PDF generation
     pdf/PdfOperationsService.ts     # split (pdf-lib), compress + PDF/A (Ghostscript / pdf-lib fallback)
@@ -414,7 +414,6 @@ src/
     metrics/MetricsService.ts       # In-memory Prometheus metrics (histograms + counters)
   types/
     index.ts                   # Shared TypeScript interfaces
-    aws-lambda-fastify.d.ts    # Ambient type declaration for aws-lambda-fastify
 
 test/integration/
   generate.test.ts       # Full route tests via app.inject() — no real browser
@@ -458,10 +457,10 @@ If deletion fails again, inspect the event log for the specific resource blockin
 
 ### Docker / ECS / Fly.io / Railway
 
-Build the `server` stage and run anywhere Docker is supported:
+Build the image and run anywhere Docker is supported:
 
 ```bash
-docker build --target server -t pdf-microservice .
+docker build -t pdf-microservice .
 docker run -p 8080:8080 --env-file .env pdf-microservice
 ```
 
@@ -471,7 +470,7 @@ docker run -p 8080:8080 --env-file .env pdf-microservice
 
 See [`.plans/PLAN.md`](.plans/PLAN.md) for the full feature roadmap and Gotenberg comparison.
 
-Planned features (in order): URL rendering → Screenshot API → OpenAPI docs → LibreOffice conversion → PDF split/compress/PDF/A → Async webhooks → Queue-based scaling → Open-source publishing (GHCR image, release automation).
+Planned features (in order): URL rendering → Screenshot API → OpenAPI docs → LibreOffice conversion → Async webhooks → Queue-based scaling → Open-source publishing (GHCR image, release automation).
 
 ---
 

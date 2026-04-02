@@ -9,9 +9,13 @@ import type {
   PdfARequestInput,
 } from './schema.js';
 import type { PdfService } from '../../services/pdf/PdfService.js';
-import type { StorageService } from '../../services/storage/StorageService.js';
+import type { StorageService, StoredPdf } from '../../services/storage/StorageService.js';
 import type { MetricsService } from '../../services/metrics/MetricsService.js';
 import type { PdfOperationsService } from '../../services/pdf/PdfOperationsService.js';
+
+function sendStoredPdf(reply: FastifyReply, storedPdf: StoredPdf) {
+  return reply.send({ statusCode: 200, data: storedPdf });
+}
 
 export function createGetHandler(storageService: StorageService) {
   return async function getHandler(
@@ -59,8 +63,8 @@ export function createMergeHandler(storageService: StorageService) {
         .send(mergedBuffer);
     }
 
-    const url = await storageService.upload(mergedBuffer);
-    return reply.send({ statusCode: 200, data: { url } });
+    const storedPdf = await storageService.upload(mergedBuffer);
+    return sendStoredPdf(reply, storedPdf);
   };
 }
 
@@ -78,8 +82,8 @@ export function createSplitHandler(storageService: StorageService, opsService: P
         .header('Content-Disposition', 'attachment; filename="split.pdf"')
         .send(resultBuffer);
     }
-    const url = await storageService.upload(resultBuffer);
-    return reply.send({ statusCode: 200, data: { url } });
+    const storedPdf = await storageService.upload(resultBuffer);
+    return sendStoredPdf(reply, storedPdf);
   };
 }
 
@@ -97,8 +101,8 @@ export function createCompressHandler(storageService: StorageService, opsService
         .header('Content-Disposition', 'attachment; filename="compressed.pdf"')
         .send(resultBuffer);
     }
-    const url = await storageService.upload(resultBuffer);
-    return reply.send({ statusCode: 200, data: { url } });
+    const storedPdf = await storageService.upload(resultBuffer);
+    return sendStoredPdf(reply, storedPdf);
   };
 }
 
@@ -116,8 +120,8 @@ export function createPdfAHandler(storageService: StorageService, opsService: Pd
         .header('Content-Disposition', 'attachment; filename="pdfa.pdf"')
         .send(resultBuffer);
     }
-    const url = await storageService.upload(resultBuffer);
-    return reply.send({ statusCode: 200, data: { url } });
+    const storedPdf = await storageService.upload(resultBuffer);
+    return sendStoredPdf(reply, storedPdf);
   };
 }
 
@@ -131,29 +135,26 @@ export function createGenerateHandler(
     reply: FastifyReply,
   ) {
     const { html, css, paper, options, stream } = request.body;
-    
     const start = Date.now();
-    let pdfBuffer: Buffer;
+
     try {
-      pdfBuffer = await pdfService.generate(html, css, paper, options);
+      const pdfBuffer = await pdfService.generate(html, css, paper, options);
+
+      if (stream) {
+        metricsService.recordSuccess(Date.now() - start, pdfBuffer.length);
+        return reply
+          .header('Content-Type', 'application/pdf')
+          .header('Content-Disposition', 'attachment; filename="document.pdf"')
+          .send(pdfBuffer);
+      }
+
+      const storedPdf = await storageService.upload(pdfBuffer);
+      metricsService.recordSuccess(Date.now() - start, pdfBuffer.length);
+
+      return sendStoredPdf(reply, storedPdf);
     } catch (err) {
       metricsService.recordError();
       throw err;
     }
-    metricsService.recordSuccess(Date.now() - start, pdfBuffer.length);
-
-    if (stream) {
-      return reply
-        .header('Content-Type', 'application/pdf')
-        .header('Content-Disposition', 'attachment; filename="document.pdf"')
-        .send(pdfBuffer);
-    }
-
-    const url = await storageService.upload(pdfBuffer);
-
-    return reply.send({
-      statusCode: 200,
-      data: { url },
-    });
   };
 }

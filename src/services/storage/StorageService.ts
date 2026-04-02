@@ -3,10 +3,33 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  HeadObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 import { env } from '../../config/env.js';
+
+export interface StoredPdf {
+  id: string;
+  url: string;
+}
+
+export class PdfNotFoundError extends Error {
+  readonly statusCode = 404;
+
+  constructor(id: string) {
+    super(`PDF not found: ${id}`);
+    this.name = 'PdfNotFoundError';
+  }
+}
+
+function isS3NotFoundError(err: unknown): boolean {
+  if (!(err instanceof Error)) {
+    return false;
+  }
+
+  return err.name === 'NoSuchKey' || err.name === 'NotFound';
+}
 
 export class StorageService {
   // s3 is used for uploads; s3Public is used for presigning so the returned
@@ -20,7 +43,23 @@ export class StorageService {
     return `pdfs/${id}.pdf`;
   }
 
+  private async assertExists(id: string): Promise<void> {
+    try {
+      await this.s3.send(
+        new HeadObjectCommand({ Bucket: env.S3_BUCKET, Key: this.keyFromId(id) }),
+      );
+    } catch (err) {
+      if (isS3NotFoundError(err)) {
+        throw new PdfNotFoundError(id);
+      }
+
+      throw err;
+    }
+  }
+
   async getUrl(id: string): Promise<string> {
+    await this.assertExists(id);
+
     return getSignedUrl(
       this.s3Public,
       new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: this.keyFromId(id) }),
@@ -35,15 +74,30 @@ export class StorageService {
   }
 
   async download(id: string): Promise<Buffer> {
-    const response = await this.s3.send(
-      new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: this.keyFromId(id) }),
-    );
-    const bytes = await response.Body!.transformToByteArray();
+    let response;
+    try {
+      response = await this.s3.send(
+        new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: this.keyFromId(id) }),
+      );
+    } catch (err) {
+      if (isS3NotFoundError(err)) {
+        throw new PdfNotFoundError(id);
+      }
+
+      throw err;
+    }
+
+    if (!response.Body) {
+      throw new PdfNotFoundError(id);
+    }
+
+    const bytes = await response.Body.transformToByteArray();
     return Buffer.from(bytes);
   }
 
-  async upload(pdfBuffer: Buffer): Promise<string> {
-    const key = `pdfs/${randomUUID()}.pdf`;
+  async upload(pdfBuffer: Buffer): Promise<StoredPdf> {
+    const id = randomUUID();
+    const key = this.keyFromId(id);
 
     await this.s3.send(
       new PutObjectCommand({
@@ -63,6 +117,6 @@ export class StorageService {
       { expiresIn: env.SIGNED_URL_EXPIRY_SECONDS },
     );
 
-    return url;
+    return { id, url };
   }
 }
