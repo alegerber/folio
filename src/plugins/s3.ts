@@ -10,8 +10,11 @@ declare module 'fastify' {
 }
 
 export const s3Plugin = fp(async (fastify) => {
+  // Only pass explicit credentials for local development (MinIO).
+  // In Lambda the SDK credential chain picks up the execution role automatically,
+  // including the required session token — don't override it here.
   const credentials =
-    env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY
+    env.AWS_ENDPOINT_URL && env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY
       ? {
           accessKeyId: env.AWS_ACCESS_KEY_ID,
           secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
