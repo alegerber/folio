@@ -29,6 +29,7 @@ export interface GenerateRequest {
 export interface GenerateResponse {
   statusCode: number;
   data: {
+    id: string;
     url: string;
   };
 }

@@ -50,6 +50,11 @@ extract_id() {
   echo "$1" | sed 's|.*pdfs/\([^.]*\)\.pdf.*|\1|'
 }
 
+# extract a string field from a compact JSON response body
+extract_json_string() {
+  echo "$1" | sed -n "s|.*\"$2\":\"\\([^\"]*\\)\".*|\\1|p"
+}
+
 # Auth header args for curl — used as "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}" 
 # Must be an array; command substitution $(func) word-splits the header value.
 AUTH_HEADER=()
@@ -134,8 +139,7 @@ STATUS_CODE=$(echo "$RESP" | grep -o '"statusCode":[0-9]*' | grep -o '[0-9]*')
 assert_eq "statusCode 200" "200" "$STATUS_CODE"
 assert_contains "response contains url" '"url"' "$RESP"
 
-URL1=$(echo "$RESP" | sed 's/.*"url":"\([^"]*\)".*/\1/')
-ID1=$(extract_id "$URL1")
+ID1=$(extract_json_string "$RESP" id)
 echo "    ID 1: $ID1"
 
 echo ""
@@ -169,8 +173,7 @@ RESP2=$(curl -s -X POST "$BASE/pdf/generate" \
   "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
   -H "Content-Type: application/json" \
   -d '{"html": "<html><body><h1>Smoke Test Page 2</h1></body></html>"}')
-URL2=$(echo "$RESP2" | sed 's/.*"url":"\([^"]*\)".*/\1/')
-ID2=$(extract_id "$URL2")
+ID2=$(extract_json_string "$RESP2" id)
 assert_contains "second generate ok" '"statusCode":200' "$RESP2"
 echo "    ID 2: $ID2"
 

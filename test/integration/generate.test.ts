@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 
+const STORED_PDF = {
+  id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+  url: 'https://s3.amazonaws.com/test-bucket/pdfs/test.pdf?signed=true',
+};
+
 // Mock env before importing server
 vi.mock('../../src/config/env.js', () => ({
   env: {
@@ -24,7 +29,7 @@ vi.mock('../../src/services/pdf/PdfService.js', () => ({
 // Mock StorageService
 vi.mock('../../src/services/storage/StorageService.js', () => ({
   StorageService: class {
-    upload = vi.fn().mockResolvedValue('https://s3.amazonaws.com/test-bucket/pdfs/test.pdf?signed=true');
+    upload = vi.fn().mockResolvedValue(STORED_PDF);
   },
 }));
 
@@ -62,7 +67,7 @@ describe('POST /pdf/generate', () => {
     const body = response.json();
     expect(body).toMatchObject({
       statusCode: 200,
-      data: { url: expect.stringContaining('https://') },
+      data: STORED_PDF,
     });
   });
 

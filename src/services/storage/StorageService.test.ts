@@ -40,9 +40,12 @@ describe('StorageService', () => {
   it('uploads PDF and returns a presigned URL', async () => {
     const pdfBuffer = Buffer.from('%PDF-1.4 test content');
 
-    const url = await storageService.upload(pdfBuffer);
+    const storedPdf = await storageService.upload(pdfBuffer);
 
-    expect(url).toBe('https://s3.amazonaws.com/test-bucket/pdfs/test.pdf?signed=true');
+    expect(storedPdf).toMatchObject({
+      id: expect.any(String),
+      url: 'https://s3.amazonaws.com/test-bucket/pdfs/test.pdf?signed=true',
+    });
     expect(mockS3Client.send).toHaveBeenCalledOnce();
   });
 
@@ -54,5 +57,23 @@ describe('StorageService', () => {
 
     const sendCall = vi.mocked(mockS3Client.send).mock.calls[0][0];
     expect(sendCall).toBeInstanceOf(PutObjectCommand);
+  });
+
+  it('checks that a PDF exists before presigning its URL', async () => {
+    const { HeadObjectCommand } = await import('@aws-sdk/client-s3');
+
+    await storageService.getUrl('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
+
+    const sendCall = vi.mocked(mockS3Client.send).mock.calls[0][0];
+    expect(sendCall).toBeInstanceOf(HeadObjectCommand);
+  });
+
+  it('throws a not found error when the PDF does not exist', async () => {
+    const notFoundError = Object.assign(new Error('missing'), { name: 'NotFound' });
+    vi.mocked(mockS3Client.send).mockRejectedValueOnce(notFoundError);
+
+    await expect(storageService.getUrl('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11')).rejects.toThrow(
+      'PDF not found',
+    );
   });
 });

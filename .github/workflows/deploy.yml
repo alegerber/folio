@@ -64,3 +64,4 @@ jobs:
         run: ./scripts/smoke-test.sh "${{ needs.deploy.outputs.api-url }}"
         env:
           API_KEY: ${{ secrets.API_KEY }}
+          GHOSTSCRIPT_PATH: /usr/bin/gs

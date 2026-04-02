@@ -49,7 +49,6 @@ src/
     metrics/MetricsService.ts       # In-memory histograms + counter; serialises to Prometheus text
   types/
     index.ts                   # GenerateRequest, PaperOptions, PdfOptions, GenerateResponse
-    aws-lambda-fastify.d.ts    # Ambient declaration for aws-lambda-fastify (no types shipped)
 ```
 
 ## Authentication
@@ -69,7 +68,7 @@ Returns service liveness. Also responds to `HEAD /health`.
 { "status": "ok" }
 ```
 
-Use for load balancer health checks or Lambda function URL probes. No auth required.
+Use for load balancer health checks or Lambda function URL probes. Requires `X-Api-Key` when `API_KEY` is set.
 
 **Files:** `src/routes/health/index.ts`, `src/routes/health/handler.ts`
 
@@ -112,7 +111,7 @@ Metrics are in-memory (reset on restart). `MetricsService` is instantiated in `s
 
 **Response (`stream: false`):**
 ```json
-{ "statusCode": 200, "data": { "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
+{ "statusCode": 200, "data": { "id": "550e8400-e29b-41d4-a716-446655440000", "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
 ```
 
 **Response (`stream: true`):**
@@ -160,12 +159,12 @@ Downloads two or more existing PDFs by their IDs, merges them in page order usin
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `ids` | UUID[] | yes | Ordered list of PDF IDs (minimum 2) |
+| `ids` | UUID[] | yes | Ordered list of PDF IDs (minimum 2, maximum 20) |
 | `stream` | boolean | no | `true` = binary, `false` = S3 URL (default) |
 
 **Response (`stream: false`):**
 ```json
-{ "statusCode": 200, "data": { "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
+{ "statusCode": 200, "data": { "id": "550e8400-e29b-41d4-a716-446655440000", "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }
 ```
 
 **Response (`stream: true`):** `Content-Type: application/pdf`, `Content-Disposition: attachment; filename="merged.pdf"`, binary PDF bytes.
@@ -195,7 +194,7 @@ Extracts a subset of pages from an existing PDF using `pdf-lib`.
 | `pages` | string | yes | Page range expression: `"1-3"` (range), `"1,3,5"` (comma list), `"2-"` (open-ended) |
 | `stream` | boolean | no | `true` = binary, `false` = S3 URL (default) |
 
-Page numbers are 1-based. Ranges are inclusive. Out-of-range indices are silently dropped. Duplicates are deduplicated. Returns `500` if the expression yields no valid pages.
+Page numbers are 1-based. Ranges are inclusive. Out-of-range indices are silently dropped. Duplicates are deduplicated. Invalid expressions or expressions that yield no valid pages return `400`.
 
 **Files:** `src/routes/pdf/handler.ts` (`createSplitHandler`), `src/services/pdf/PdfOperationsService.ts` (`split`, `parsePageRange`)
 

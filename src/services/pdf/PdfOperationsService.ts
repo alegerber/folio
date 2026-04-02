@@ -5,20 +5,70 @@ import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { tmpdir } from 'os';
 
+export class InvalidPageRangeError extends Error {
+  readonly statusCode = 400;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidPageRangeError';
+  }
+}
+
+function parsePositivePageNumber(value: string, part: string): number {
+  if (!/^\d+$/.test(value)) {
+    throw new InvalidPageRangeError(`Invalid page range segment: "${part}"`);
+  }
+
+  const pageNumber = Number(value);
+  if (pageNumber < 1) {
+    throw new InvalidPageRangeError(`Page numbers must be greater than zero: "${part}"`);
+  }
+
+  return pageNumber;
+}
+
 export function parsePageRange(expr: string, totalPages: number): number[] {
+  const uniqueIndices = new Set<number>();
   const indices: number[] = [];
-  for (const part of expr.split(',')) {
-    const trimmed = part.trim();
-    if (trimmed.includes('-')) {
-      const [start, end] = trimmed.split('-');
-      const from = start ? parseInt(start, 10) - 1 : 0;
-      const to = end ? parseInt(end, 10) - 1 : totalPages - 1;
-      for (let i = from; i <= to; i++) indices.push(i);
-    } else {
-      indices.push(parseInt(trimmed, 10) - 1);
+
+  for (const segment of expr.split(',')) {
+    const part = segment.trim();
+    if (!part) {
+      throw new InvalidPageRangeError('Page range contains an empty segment');
+    }
+
+    const rangeMatch = /^(\d+)?-(\d+)?$/.exec(part);
+    if (rangeMatch) {
+      const [, startText, endText] = rangeMatch;
+      if (!startText && !endText) {
+        throw new InvalidPageRangeError(`Invalid page range segment: "${part}"`);
+      }
+
+      const from = startText ? parsePositivePageNumber(startText, part) - 1 : 0;
+      const to = endText ? parsePositivePageNumber(endText, part) - 1 : totalPages - 1;
+
+      if (from > to) {
+        throw new InvalidPageRangeError(`Page range cannot be descending: "${part}"`);
+      }
+
+      for (let i = from; i <= to; i++) {
+        if (i >= 0 && i < totalPages && !uniqueIndices.has(i)) {
+          uniqueIndices.add(i);
+          indices.push(i);
+        }
+      }
+
+      continue;
+    }
+
+    const index = parsePositivePageNumber(part, part) - 1;
+    if (index >= 0 && index < totalPages && !uniqueIndices.has(index)) {
+      uniqueIndices.add(index);
+      indices.push(index);
     }
   }
-  return [...new Set(indices)].filter((i) => i >= 0 && i < totalPages);
+
+  return indices;
 }
 
 function runGhostscript(gsPath: string, args: string[]): Promise<void> {
@@ -52,7 +102,7 @@ export class PdfOperationsService {
     const indices = parsePageRange(pages, totalPages);
 
     if (indices.length === 0) {
-      throw new Error('Page range produces no pages');
+      throw new InvalidPageRangeError('Page range produces no pages');
     }
 
     const output = await PDFDocument.create();

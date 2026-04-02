@@ -128,4 +128,17 @@ describe('PdfService', () => {
 
     expect(mockBrowserClose).toHaveBeenCalledOnce();
   });
+
+  it('retries browser launch after an initial launch failure', async () => {
+    mockLaunch
+      .mockRejectedValueOnce(new Error('Chromium failed to start'))
+      .mockResolvedValueOnce({
+        newPage: mockNewPage,
+        close: mockBrowserClose,
+      });
+
+    await expect(pdfService.generate('<html></html>')).rejects.toThrow('Chromium failed to start');
+    await expect(pdfService.generate('<html></html>')).resolves.toBeInstanceOf(Buffer);
+    expect(mockLaunch).toHaveBeenCalledTimes(2);
+  });
 });

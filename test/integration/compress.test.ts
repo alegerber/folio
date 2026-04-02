@@ -1,7 +1,15 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import type { FastifyInstance } from 'fastify';
-import { MAX_MERGE_IDS } from '../../src/routes/pdf/schema.js';
+
+const STORED_PDF = {
+  id: '6ee48e67-f825-40e4-8be0-8cc4c1dfd637',
+  url: 'https://s3.amazonaws.com/test-bucket/pdfs/compressed.pdf?signed=true',
+};
+const SOURCE_ID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+const MISSING_ID = '0f7f4b24-fb7d-4f7b-a94d-a673d2f6ef83';
+
+let sourcePdfBuffer: Buffer;
 
 vi.mock('../../src/config/env.js', () => ({
   env: {
@@ -21,18 +29,18 @@ vi.mock('../../src/services/pdf/PdfService.js', () => ({
   },
 }));
 
-// Provide a real minimal PDF buffer so pdf-lib can load it during the merge
-let minimalPdfBuffer: Buffer;
-
 vi.mock('../../src/services/storage/StorageService.js', () => ({
   StorageService: class {
-    upload = vi.fn().mockResolvedValue({
-      id: 'c2cf6b63-9bd4-4be1-8577-048ca0ddde3c',
-      url: 'https://s3.amazonaws.com/test-bucket/pdfs/merged.pdf?signed=true',
-    });
+    upload = vi.fn().mockResolvedValue(STORED_PDF);
     getUrl = vi.fn().mockResolvedValue('https://s3.amazonaws.com/test-bucket/pdfs/test.pdf?signed=true');
     delete = vi.fn().mockResolvedValue(undefined);
-    download = vi.fn().mockImplementation(() => Promise.resolve(minimalPdfBuffer));
+    download = vi.fn().mockImplementation(async (id: string) => {
+      if (id === MISSING_ID) {
+        throw Object.assign(new Error(`PDF not found: ${id}`), { statusCode: 404 });
+      }
+
+      return sourcePdfBuffer;
+    });
   },
 }));
 
@@ -43,16 +51,13 @@ vi.mock('../../src/plugins/s3.js', () => ({
   },
 }));
 
-const UUID1 = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
-const UUID2 = 'b1ffcd00-0d1c-4f09-8c7e-7cc0ce491b22';
-
-describe('POST /pdf/merge', () => {
+describe('POST /pdf/compress', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
     const doc = await PDFDocument.create();
     doc.addPage();
-    minimalPdfBuffer = Buffer.from(await doc.save());
+    sourcePdfBuffer = Buffer.from(await doc.save());
 
     const { buildApp } = await import('../../src/server.js');
     app = await buildApp();
@@ -63,64 +68,39 @@ describe('POST /pdf/merge', () => {
     await app.close();
   });
 
-  it('returns a presigned URL when stream is false', async () => {
+  it('returns a stored PDF response when stream is false', async () => {
     const response = await app.inject({
       method: 'POST',
-      url: '/pdf/merge',
-      payload: { ids: [UUID1, UUID2] },
+      url: '/pdf/compress',
+      payload: { id: SOURCE_ID },
     });
 
     expect(response.statusCode).toBe(200);
-    const body = response.json();
-    expect(body).toMatchObject({
+    expect(response.json()).toMatchObject({
       statusCode: 200,
-      data: {
-        id: expect.any(String),
-        url: expect.stringContaining('https://'),
-      },
+      data: STORED_PDF,
     });
   });
 
   it('returns binary PDF when stream is true', async () => {
     const response = await app.inject({
       method: 'POST',
-      url: '/pdf/merge',
-      payload: { ids: [UUID1, UUID2], stream: true },
+      url: '/pdf/compress',
+      payload: { id: SOURCE_ID, stream: true },
     });
 
     expect(response.statusCode).toBe(200);
     expect(response.headers['content-type']).toContain('application/pdf');
   });
 
-  it('returns 400 when fewer than 2 IDs are provided', async () => {
+  it('returns 404 when the source PDF does not exist', async () => {
     const response = await app.inject({
       method: 'POST',
-      url: '/pdf/merge',
-      payload: { ids: [UUID1] },
+      url: '/pdf/compress',
+      payload: { id: MISSING_ID },
     });
 
-    expect(response.statusCode).toBe(400);
-  });
-
-  it('returns 400 for non-UUID ids', async () => {
-    const response = await app.inject({
-      method: 'POST',
-      url: '/pdf/merge',
-      payload: { ids: ['not-a-uuid', 'also-not-a-uuid'] },
-    });
-
-    expect(response.statusCode).toBe(400);
-  });
-
-  it('returns 400 when too many IDs are provided', async () => {
-    const ids = Array.from({ length: MAX_MERGE_IDS + 1 }, () => UUID1);
-
-    const response = await app.inject({
-      method: 'POST',
-      url: '/pdf/merge',
-      payload: { ids },
-    });
-
-    expect(response.statusCode).toBe(400);
+    expect(response.statusCode).toBe(404);
+    expect(response.json().message).toContain('PDF not found');
   });
 });

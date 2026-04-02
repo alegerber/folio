@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export const MAX_MERGE_IDS = 20;
+
 export const generateRequestSchema = z.object({
   html: z.string().min(1, 'html is required'),
   css: z.string().optional(),
@@ -44,7 +46,7 @@ const { $schema: _s1, ...pdfIdParamsJsonSchema } = z.toJSONSchema(pdfIdParamsSch
 export { pdfIdParamsJsonSchema };
 
 export const mergeRequestSchema = z.object({
-  ids: z.array(z.string().uuid()).min(2),
+  ids: z.array(z.string().uuid()).min(2).max(MAX_MERGE_IDS),
   stream: z.boolean().optional().default(false),
 });
 export type MergeRequestInput = z.infer<typeof mergeRequestSchema>;
