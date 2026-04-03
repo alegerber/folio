@@ -3,7 +3,8 @@ import { z } from 'zod';
 export const MAX_MERGE_IDS = 20;
 
 export const generateRequestSchema = z.object({
-  html: z.string().min(1, 'html is required'),
+  html: z.string().min(1).optional(),
+  url: z.url().optional(),
   css: z.string().optional(),
   paper: z
     .object({
@@ -27,6 +28,16 @@ export const generateRequestSchema = z.object({
       footerTemplate: z.string().optional(),
     })
     .optional(),
+  cookies: z
+    .array(
+      z.object({
+        name: z.string(),
+        value: z.string(),
+        domain: z.string(),
+      }),
+    )
+    .optional(),
+  extraHeaders: z.record(z.string(), z.string()).optional(),
   stream: z.boolean().optional().default(false),
 });
 

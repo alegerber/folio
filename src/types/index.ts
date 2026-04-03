@@ -18,11 +18,20 @@ export interface PdfOptions {
   footerTemplate?: string;
 }
 
+export interface CookieParam {
+  name: string;
+  value: string;
+  domain: string;
+}
+
 export interface GenerateRequest {
-  html: string;
+  html?: string;
+  url?: string;
   css?: string;
   paper?: PaperOptions;
   options?: PdfOptions;
+  cookies?: CookieParam[];
+  extraHeaders?: Record<string, string>;
   stream?: boolean;
 }
 

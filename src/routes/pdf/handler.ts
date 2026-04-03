@@ -134,11 +134,19 @@ export function createGenerateHandler(
     request: FastifyRequest<{ Body: GenerateRequestInput }>,
     reply: FastifyReply,
   ) {
-    const { html, css, paper, options, stream } = request.body;
+    const { stream, ...generateInput } = request.body;
+
+    if (!generateInput.html && !generateInput.url) {
+      return reply.badRequest('Provide either html or url');
+    }
+    if (generateInput.html && generateInput.url) {
+      return reply.badRequest('Provide either html or url, not both');
+    }
+
     const start = Date.now();
 
     try {
-      const pdfBuffer = await pdfService.generate(html, css, paper, options);
+      const pdfBuffer = await pdfService.generate(generateInput);
 
       if (stream) {
         metricsService.recordSuccess(Date.now() - start, pdfBuffer.length);

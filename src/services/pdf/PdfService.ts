@@ -1,5 +1,15 @@
 import type { Browser, PaperFormat } from 'puppeteer-core';
-import type { PaperOptions, PdfOptions } from '../../types/index.js';
+import type { PaperOptions, PdfOptions, CookieParam } from '../../types/index.js';
+
+export interface GenerateInput {
+  html?: string;
+  url?: string;
+  css?: string;
+  paper?: PaperOptions;
+  options?: PdfOptions;
+  cookies?: CookieParam[];
+  extraHeaders?: Record<string, string>;
+}
 
 const PAPER_SIZES: Record<string, { width: string; height: string }> = {
   A4: { width: '210mm', height: '297mm' },
@@ -34,17 +44,24 @@ export class PdfService {
     });
   }
 
-  async generate(
-    html: string,
-    css?: string,
-    paper?: PaperOptions,
-    options?: PdfOptions,
-  ): Promise<Buffer> {
+  async generate(input: GenerateInput): Promise<Buffer> {
+    const { html, url, css, paper, options, cookies, extraHeaders } = input;
     const browser = await this.getBrowser();
     const page = await browser.newPage();
 
     try {
-      await page.setContent(html, { waitUntil: 'networkidle0' });
+      if (cookies?.length) {
+        await page.setCookie(...cookies);
+      }
+      if (extraHeaders) {
+        await page.setExtraHTTPHeaders(extraHeaders);
+      }
+
+      if (url) {
+        await page.goto(url, { waitUntil: 'networkidle0', timeout: 25_000 });
+      } else {
+        await page.setContent(html!, { waitUntil: 'networkidle0' });
+      }
 
       if (css) {
         await page.addStyleTag({ content: css });
