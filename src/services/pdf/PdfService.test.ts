@@ -4,10 +4,16 @@ import { PdfService } from './PdfService.js';
 const mockPdf = vi.fn().mockResolvedValue(Buffer.from('%PDF-1.4 mock'));
 const mockClose = vi.fn().mockResolvedValue(undefined);
 const mockSetContent = vi.fn().mockResolvedValue(undefined);
+const mockGoto = vi.fn().mockResolvedValue(undefined);
 const mockAddStyleTag = vi.fn().mockResolvedValue(undefined);
+const mockSetCookie = vi.fn().mockResolvedValue(undefined);
+const mockSetExtraHTTPHeaders = vi.fn().mockResolvedValue(undefined);
 const mockNewPage = vi.fn().mockResolvedValue({
   setContent: mockSetContent,
+  goto: mockGoto,
   addStyleTag: mockAddStyleTag,
+  setCookie: mockSetCookie,
+  setExtraHTTPHeaders: mockSetExtraHTTPHeaders,
   pdf: mockPdf,
   close: mockClose,
 });
@@ -42,26 +48,61 @@ describe('PdfService', () => {
   it('generates a PDF from HTML', async () => {
     const html = '<html><body><h1>Hello World</h1></body></html>';
 
-    const result = await pdfService.generate(html);
+    const result = await pdfService.generate({ html });
 
     expect(mockSetContent).toHaveBeenCalledWith(html, { waitUntil: 'networkidle0' });
+    expect(mockGoto).not.toHaveBeenCalled();
     expect(mockAddStyleTag).not.toHaveBeenCalled();
     expect(mockPdf).toHaveBeenCalledOnce();
     expect(result).toBeInstanceOf(Buffer);
+  });
+
+  it('navigates to a URL when url is provided', async () => {
+    const url = 'https://example.com';
+
+    const result = await pdfService.generate({ url });
+
+    expect(mockGoto).toHaveBeenCalledWith(url, { waitUntil: 'networkidle0', timeout: 25_000 });
+    expect(mockSetContent).not.toHaveBeenCalled();
+    expect(mockPdf).toHaveBeenCalledOnce();
+    expect(result).toBeInstanceOf(Buffer);
+  });
+
+  it('sets cookies before navigation', async () => {
+    const cookies = [{ name: 'session', value: 'abc123', domain: 'example.com' }];
+
+    await pdfService.generate({ url: 'https://example.com', cookies });
+
+    expect(mockSetCookie).toHaveBeenCalledWith(...cookies);
+    // cookies set before goto
+    const setCookieOrder = mockSetCookie.mock.invocationCallOrder[0];
+    const gotoOrder = mockGoto.mock.invocationCallOrder[0];
+    expect(setCookieOrder).toBeLessThan(gotoOrder);
+  });
+
+  it('sets extra headers before navigation', async () => {
+    const extraHeaders = { Authorization: 'Bearer token123' };
+
+    await pdfService.generate({ url: 'https://example.com', extraHeaders });
+
+    expect(mockSetExtraHTTPHeaders).toHaveBeenCalledWith(extraHeaders);
+    const headersOrder = mockSetExtraHTTPHeaders.mock.invocationCallOrder[0];
+    const gotoOrder = mockGoto.mock.invocationCallOrder[0];
+    expect(headersOrder).toBeLessThan(gotoOrder);
   });
 
   it('injects CSS via addStyleTag when css is provided', async () => {
     const html = '<html><body><h1>Hello</h1></body></html>';
     const css = 'body { font-size: 14px; }';
 
-    await pdfService.generate(html, css);
+    await pdfService.generate({ html, css });
 
     expect(mockSetContent).toHaveBeenCalledWith(html, { waitUntil: 'networkidle0' });
     expect(mockAddStyleTag).toHaveBeenCalledWith({ content: css });
   });
 
   it('does not call addStyleTag when css is not provided', async () => {
-    await pdfService.generate('<html></html>');
+    await pdfService.generate({ html: '<html></html>' });
 
     expect(mockAddStyleTag).not.toHaveBeenCalled();
   });
@@ -69,7 +110,7 @@ describe('PdfService', () => {
   it('applies paper size options', async () => {
     const html = '<html><body></body></html>';
 
-    await pdfService.generate(html, undefined, { size: 'A4', orientation: 'portrait' });
+    await pdfService.generate({ html, paper: { size: 'A4', orientation: 'portrait' } });
 
     const pdfCall = mockPdf.mock.calls[0][0];
     expect(pdfCall).toMatchObject({ width: '210mm', height: '297mm' });
@@ -78,7 +119,7 @@ describe('PdfService', () => {
   it('applies landscape orientation by swapping dimensions', async () => {
     const html = '<html><body></body></html>';
 
-    await pdfService.generate(html, undefined, { size: 'A4', orientation: 'landscape' });
+    await pdfService.generate({ html, paper: { size: 'A4', orientation: 'landscape' } });
 
     const pdfCall = mockPdf.mock.calls[0][0];
     expect(pdfCall).toMatchObject({ width: '297mm', height: '210mm' });
@@ -87,16 +128,14 @@ describe('PdfService', () => {
   it('applies PDF options', async () => {
     const html = '<html><body></body></html>';
 
-    await pdfService.generate(
+    await pdfService.generate({
       html,
-      undefined,
-      undefined,
-      {
+      options: {
         printBackground: true,
         scale: 0.8,
         margin: { top: '10mm', bottom: '10mm', left: '15mm', right: '15mm' },
       },
-    );
+    });
 
     const pdfCall = mockPdf.mock.calls[0][0];
     expect(pdfCall).toMatchObject({
@@ -109,21 +148,21 @@ describe('PdfService', () => {
   it('closes the page after generation even on error', async () => {
     mockSetContent.mockRejectedValueOnce(new Error('Page load failed'));
 
-    await expect(pdfService.generate('<html></html>')).rejects.toThrow('Page load failed');
+    await expect(pdfService.generate({ html: '<html></html>' })).rejects.toThrow('Page load failed');
     expect(mockClose).toHaveBeenCalledOnce();
   });
 
   it('reuses the browser across multiple calls', async () => {
     const html = '<html><body></body></html>';
 
-    await pdfService.generate(html);
-    await pdfService.generate(html);
+    await pdfService.generate({ html });
+    await pdfService.generate({ html });
 
     expect(mockLaunch).toHaveBeenCalledOnce();
   });
 
   it('closes the browser on close()', async () => {
-    await pdfService.generate('<html></html>');
+    await pdfService.generate({ html: '<html></html>' });
     await pdfService.close();
 
     expect(mockBrowserClose).toHaveBeenCalledOnce();
@@ -137,8 +176,8 @@ describe('PdfService', () => {
         close: mockBrowserClose,
       });
 
-    await expect(pdfService.generate('<html></html>')).rejects.toThrow('Chromium failed to start');
-    await expect(pdfService.generate('<html></html>')).resolves.toBeInstanceOf(Buffer);
+    await expect(pdfService.generate({ html: '<html></html>' })).rejects.toThrow('Chromium failed to start');
+    await expect(pdfService.generate({ html: '<html></html>' })).resolves.toBeInstanceOf(Buffer);
     expect(mockLaunch).toHaveBeenCalledTimes(2);
   });
 });

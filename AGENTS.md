@@ -92,7 +92,9 @@ Metrics are in-memory (reset on restart). `MetricsService` is instantiated in `s
 
 ### POST /pdf/generate
 
-**Request body:**
+Accepts either `html` (raw HTML string) or `url` (navigates to the URL and renders the page). The two fields are mutually exclusive.
+
+**Request body (HTML):**
 ```json
 {
   "html": "<html>...</html>",
@@ -105,6 +107,17 @@ Metrics are in-memory (reset on restart). `MetricsService` is instantiated in `s
     "headerTemplate": "<div style=\"font-size:10px;\">Header</div>",
     "footerTemplate": "<div style=\"font-size:10px;\">Page <span class=\"pageNumber\"></span></div>"
   },
+  "stream": false
+}
+```
+
+**Request body (URL):**
+```json
+{
+  "url": "https://example.com",
+  "cookies": [{ "name": "session", "value": "abc123", "domain": "example.com" }],
+  "extraHeaders": { "Authorization": "Bearer token" },
+  "paper": { "size": "A4" },
   "stream": false
 }
 ```
@@ -319,13 +332,13 @@ Planned features are documented in `.plans/`. See [`.plans/PLAN.md`](.plans/PLAN
 | `additional-routes.md` | `GET /pdf/:id`, `DELETE /pdf/:id`, `POST /pdf/merge` |
 | `pdf-operations.md` | `POST /pdf/split`, `/pdf/compress`, `/pdf/pdfa` |
 | `open-source-publishing.md` | MIT license, GHCR image publishing, release-please, CONTRIBUTING |
+| `url-rendering.md` | Render a URL instead of raw HTML, with cookies and extra headers |
 
 ### Planned — Gotenberg feature parity
 
 | File | Description |
 |---|---|
 | `ssrf-protection.md` | Shared SSRF guard for URL-accepting endpoints |
-| `url-rendering.md` | Render a URL instead of raw HTML |
 | `screenshot-api.md` | `POST /screenshot` — HTML/URL → PNG/JPEG/WebP |
 | `libreoffice-conversion.md` | `POST /convert` — DOCX/XLSX/PPTX → PDF via LibreOffice (Docker/ECS only) |
 | `openapi-docs.md` | `GET /docs` Swagger UI + `GET /openapi.json` |

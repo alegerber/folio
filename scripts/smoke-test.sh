@@ -334,6 +334,99 @@ else
   echo ""
 fi
 
+# ── POST /pdf/generate with url field ────────────────────────────────────────
+
+echo "--- POST /pdf/generate (url, stream: false) ---"
+RESP=$(curl -s -X POST "$BASE/pdf/generate" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com"}')
+
+STATUS_CODE=$(echo "$RESP" | grep -o '"statusCode":[0-9]*' | grep -o '[0-9]*')
+assert_eq "statusCode 200" "200" "$STATUS_CODE"
+assert_contains "response contains url" '"url"' "$RESP"
+
+URL_ID=$(extract_json_string "$RESP" id)
+echo "    URL ID: $URL_ID"
+
+echo ""
+
+# ── POST /pdf/generate with url + cookies/headers ───────────────────────────
+
+echo "--- POST /pdf/generate (url + cookies + extraHeaders) ---"
+RESP=$(curl -s -X POST "$BASE/pdf/generate" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com",
+    "cookies": [{"name": "test", "value": "abc", "domain": "example.com"}],
+    "extraHeaders": {"X-Custom": "smoke"}
+  }')
+STATUS_CODE=$(echo "$RESP" | grep -o '"statusCode":[0-9]*' | grep -o '[0-9]*')
+assert_eq "statusCode 200" "200" "$STATUS_CODE"
+
+echo ""
+
+# ── POST /pdf/generate with url (stream: true) ──────────────────────────────
+
+echo "--- POST /pdf/generate (url, stream: true) ---"
+TMP_URL_PDF=$(mktemp /tmp/smoke-test-url-XXXXXX.pdf)
+HTTP_CODE=$(curl -s -X POST "$BASE/pdf/generate" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com", "stream": true}' \
+  -o "$TMP_URL_PDF" -w "%{http_code}")
+assert_eq "HTTP 200" "200" "$HTTP_CODE"
+
+MAGIC=$(head -c 4 "$TMP_URL_PDF" 2>/dev/null || true)
+if [ "$MAGIC" = "%PDF" ]; then
+  ok "url response is a valid PDF"
+else
+  fail "url response is not a valid PDF (magic bytes: $MAGIC)"
+fi
+rm -f "$TMP_URL_PDF"
+
+echo ""
+
+# ── POST /pdf/generate validation: both html + url → 400 ────────────────────
+
+echo "--- POST /pdf/generate (html + url → 400) ---"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/pdf/generate" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{"html": "<h1>test</h1>", "url": "https://example.com"}')
+assert_eq "HTTP 400" "400" "$HTTP_CODE"
+
+echo ""
+
+# ── POST /pdf/generate validation: neither html nor url → 400 ───────────────
+
+echo "--- POST /pdf/generate (no html, no url → 400) ---"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/pdf/generate" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{}')
+assert_eq "HTTP 400" "400" "$HTTP_CODE"
+
+echo ""
+
+# ── POST /pdf/generate validation: invalid url → 400 ────────────────────────
+
+echo "--- POST /pdf/generate (invalid url → 400) ---"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/pdf/generate" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{"url": "not-a-url"}')
+assert_eq "HTTP 400" "400" "$HTTP_CODE"
+
+echo ""
+
+# ── Cleanup URL-generated PDF ────────────────────────────────────────────────
+
+if [ -n "$URL_ID" ]; then
+  curl -s -o /dev/null -X DELETE "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}" "$BASE/pdf/$URL_ID"
+fi
+
 # ── DELETE /pdf/:id ───────────────────────────────────────────────────────────
 
 echo "--- DELETE /pdf/:id ---"
