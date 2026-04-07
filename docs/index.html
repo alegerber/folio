@@ -134,17 +134,47 @@ curl -s -X POST http://localhost:8080/pdf/generate \
         </div>
       </section>
 
-      <section id="deployment" class="site-width deployment-banner">
+      <section id="deployment" class="site-width section-grid">
         <div>
           <p class="section-kicker">Deployment</p>
-          <h2>Published by GitHub Pages, deployable to AWS Lambda</h2>
+          <h2>Ship to Lambda or any Docker host</h2>
           <p>
-            This docs site is published from the <code>docs/</code> directory via GitHub
-            Actions. The API itself deploys with SAM as a container image and includes a
-            smoke test step after deployment.
+            The same container image deploys to AWS Lambda via SAM or runs as a
+            plain Docker service on ECS, Fly.io, Railway, or any host with Docker.
           </p>
         </div>
-        <a class="button button-secondary" href="./api/">Browse the API reference</a>
+
+        <div class="code-panel">
+          <pre><code># AWS Lambda (SAM)
+sam build
+sam deploy
+
+# Docker — anywhere
+docker run -p 8080:8080 --env-file .env \
+  ghcr.io/alegerber/folio:latest</code></pre>
+        </div>
+      </section>
+
+      <section class="site-width stack-layout">
+        <div class="stack-card">
+          <p class="section-kicker">Lambda</p>
+          <h2>SAM + GitHub Actions</h2>
+          <p>
+            Every merge to <code>main</code> triggers <code>sam build</code> &rarr;
+            <code>sam deploy</code> &rarr; smoke test. Auth uses GitHub OIDC &rarr; AWS STS.
+            Recommended: 2048 MB memory, 120 s timeout.
+          </p>
+        </div>
+
+        <div class="stack-card">
+          <p class="section-kicker">Docker</p>
+          <h2>Build or pull from GHCR</h2>
+          <p>
+            Prebuilt images are published on every release. Tags:
+            <code>latest</code>, <code>x.y.z</code>, <code>x.y</code>.
+            Pass your env vars and run on any container platform.
+          </p>
+        </div>
       </section>
     </main>
 

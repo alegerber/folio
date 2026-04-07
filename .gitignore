@@ -40,6 +40,8 @@ Thumbs.db
 .aws-sam
 samconfig.toml
 
+# Playwright 
+.playwright-mcp
 
 # Other
 output.pdf
