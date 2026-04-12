@@ -119,4 +119,29 @@ export class StorageService {
 
     return { id, url };
   }
+
+  async uploadImage(buffer: Buffer, format: string, contentType: string): Promise<StoredPdf> {
+    const id = randomUUID();
+    const key = `screenshots/${id}.${format}`;
+
+    await this.s3.send(
+      new PutObjectCommand({
+        Bucket: env.S3_BUCKET,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+      }),
+    );
+
+    const url = await getSignedUrl(
+      this.s3Public,
+      new GetObjectCommand({
+        Bucket: env.S3_BUCKET,
+        Key: key,
+      }),
+      { expiresIn: env.SIGNED_URL_EXPIRY_SECONDS },
+    );
+
+    return { id, url };
+  }
 }

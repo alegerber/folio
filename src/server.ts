@@ -6,10 +6,12 @@ import { sensiblePlugin } from './plugins/sensible.js';
 import { healthRoutes } from './routes/health/index.js';
 import { pdfRoutes } from './routes/pdf/index.js';
 import { metricsRoutes } from './routes/metrics/index.js';
+import { screenshotRoutes } from './routes/screenshot/index.js';
 import { PdfService } from './services/pdf/PdfService.js';
 import { PdfOperationsService } from './services/pdf/PdfOperationsService.js';
 import { StorageService } from './services/storage/StorageService.js';
 import { MetricsService } from './services/metrics/MetricsService.js';
+import { ScreenshotService } from './services/screenshot/ScreenshotService.js';
 
 export async function buildApp() {
   const fastify = Fastify({
@@ -25,6 +27,7 @@ export async function buildApp() {
   const pdfService = new PdfService();
   const metricsService = new MetricsService();
   const opsService = new PdfOperationsService(env.GHOSTSCRIPT_PATH);
+  const screenshotService = new ScreenshotService(pdfService);
 
   await fastify.register(sensiblePlugin);
   await fastify.register(authPlugin);
@@ -37,6 +40,10 @@ export async function buildApp() {
     opsService,
   });
   await fastify.register(metricsRoutes, { metricsService });
+  await fastify.register(screenshotRoutes, {
+    screenshotService,
+    storageService: new StorageService(fastify.s3, fastify.s3Public),
+  });
 
   fastify.addHook('onReady', async () => {
     // Warm up the browser in the background — don't block the hook since
