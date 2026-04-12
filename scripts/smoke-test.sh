@@ -421,6 +421,58 @@ assert_eq "HTTP 400" "400" "$HTTP_CODE"
 
 echo ""
 
+# ── SSRF protection: private/loopback IPs → 400 ─────────────────────────────
+
+echo "--- SSRF: loopback IP (127.0.0.1) → 400 ---"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/pdf/generate" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{"url": "http://127.0.0.1/"}')
+assert_eq "HTTP 400 (loopback)" "400" "$HTTP_CODE"
+
+echo "--- SSRF: RFC1918 class A (10.0.0.1) → 400 ---"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/pdf/generate" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{"url": "http://10.0.0.1/"}')
+assert_eq "HTTP 400 (RFC1918 10.x)" "400" "$HTTP_CODE"
+
+echo "--- SSRF: RFC1918 class C (192.168.1.1) → 400 ---"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/pdf/generate" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{"url": "http://192.168.1.1/"}')
+assert_eq "HTTP 400 (RFC1918 192.168.x)" "400" "$HTTP_CODE"
+
+echo "--- SSRF: link-local / EC2 metadata (169.254.169.254) → 400 ---"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/pdf/generate" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{"url": "http://169.254.169.254/latest/meta-data/"}')
+assert_eq "HTTP 400 (link-local)" "400" "$HTTP_CODE"
+
+echo "--- SSRF: localhost hostname → 400 ---"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/pdf/generate" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{"url": "http://localhost/"}')
+assert_eq "HTTP 400 (localhost)" "400" "$HTTP_CODE"
+
+echo "--- SSRF: non-HTTP scheme (file://) → 400 ---"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/pdf/generate" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{"url": "file:///etc/passwd"}')
+assert_eq "HTTP 400 (file://)" "400" "$HTTP_CODE"
+
+SSRF_RESP=$(curl -s -X POST "$BASE/pdf/generate" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{"url": "http://169.254.169.254/latest/meta-data/"}')
+assert_contains "SSRF error body contains error field" '"error"' "$SSRF_RESP"
+
+echo ""
+
 # ── Cleanup URL-generated PDF ────────────────────────────────────────────────
 
 if [ -n "$URL_ID" ]; then

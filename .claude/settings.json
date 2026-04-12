@@ -22,6 +22,11 @@
             "type": "command",
             "command": "cmd=$(jq -r '.tool_input.command // empty'); if echo \"$cmd\" | grep -qE 'git\\s+commit'; then npm run lint 2>&1 && npm run typecheck 2>&1 && npx vitest run 2>&1 || echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Checks failed (lint / typecheck / tests) — fix errors before committing.\"}}'; fi",
             "statusMessage": "Running lint, typecheck & tests..."
+          },
+          {
+            "type": "command",
+            "command": "cmd=$(jq -r '.tool_input.command // empty'); if echo \"$cmd\" | grep -qE 'git\\s+commit'; then BASE=\"${SMOKE_TEST_URL:-http://localhost:8080}\"; if curl -sf -o /dev/null --max-time 2 \"$BASE/health\" 2>/dev/null; then ROOT=$(git rev-parse --show-toplevel 2>/dev/null); if ! bash \"$ROOT/scripts/smoke-test.sh\" \"$BASE\" 2>&1; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Smoke test failed — fix the failing routes before committing.\"}}'; fi; else echo \"[smoke] skipped — no server reachable at $BASE\" >&2; fi; fi",
+            "statusMessage": "Running smoke test..."
           }
         ]
       }
