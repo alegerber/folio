@@ -14,19 +14,17 @@ permissions:
 
 jobs:
   cleanup:
-    name: Delete Release Stack & ECR Repo
+    name: Delete Release Stack
     runs-on: ubuntu-latest
 
     steps:
-      - name: Derive resource names
+      - name: Derive stack name
         id: env
         run: |
           SUFFIX=$(echo "${{ inputs.branch }}" | sed 's/[^a-zA-Z0-9]/-/g')
           STACK="folio-${SUFFIX}"
-          ECR="${{ secrets.ECR_REPOSITORY }}-${SUFFIX}"
           echo "stack-name=${STACK}" >> "$GITHUB_OUTPUT"
-          echo "ecr-repo=${ECR}" >> "$GITHUB_OUTPUT"
-          echo "Cleaning up stack=${STACK}, ecr=${ECR}"
+          echo "Cleaning up stack=${STACK}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -44,11 +42,3 @@ jobs:
           aws cloudformation wait stack-delete-complete \
             --stack-name "${{ steps.env.outputs.stack-name }}" \
             --region eu-central-1
-
-      - name: Delete ECR repository
-        run: |
-          aws ecr delete-repository \
-            --repository-name "${{ steps.env.outputs.ecr-repo }}" \
-            --region eu-central-1 \
-            --force \
-          || echo "ECR repository does not exist or was already deleted"

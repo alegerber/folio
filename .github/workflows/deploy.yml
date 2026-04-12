@@ -25,11 +25,9 @@ jobs:
           BRANCH="${GITHUB_REF#refs/heads/}"
           if [[ "$BRANCH" == "main" ]]; then
             echo "stack-name=folio" >> "$GITHUB_OUTPUT"
-            echo "ecr-repo=${{ secrets.ECR_REPOSITORY }}" >> "$GITHUB_OUTPUT"
           else
             SUFFIX=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9]/-/g')
             echo "stack-name=folio-${SUFFIX}" >> "$GITHUB_OUTPUT"
-            echo "ecr-repo=${{ secrets.ECR_REPOSITORY }}-${SUFFIX}" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: aws-actions/setup-sam@v2
@@ -40,17 +38,6 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-deploy
           aws-region: eu-central-1
 
-      - name: Ensure ECR repository exists
-        if: github.ref != 'refs/heads/main'
-        run: |
-          aws ecr describe-repositories \
-            --repository-names "${{ steps.env.outputs.ecr-repo }}" \
-            --region eu-central-1 2>/dev/null \
-          || aws ecr create-repository \
-            --repository-name "${{ steps.env.outputs.ecr-repo }}" \
-            --region eu-central-1 \
-            --image-scanning-configuration scanOnPush=true
-
       - name: SAM build
         run: sam build
 
@@ -58,7 +45,7 @@ jobs:
         run: |
           sam deploy \
             --stack-name "${{ steps.env.outputs.stack-name }}" \
-            --image-repositories "FolioFunction=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/${{ steps.env.outputs.ecr-repo }}" \
+            --image-repositories "FolioFunction=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/${{ secrets.ECR_REPOSITORY }}" \
             --s3-bucket "${{ secrets.SAM_ARTIFACT_BUCKET }}" \
             --region eu-central-1 \
             --capabilities CAPABILITY_IAM \
