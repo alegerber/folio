@@ -42,3 +42,22 @@ export interface GenerateResponse {
     url: string;
   };
 }
+
+export interface ScreenshotRequest {
+  html?: string;
+  url?: string;
+  css?: string;
+  viewport?: { width: number; height: number };
+  format?: 'png' | 'jpeg' | 'webp';
+  quality?: number;
+  fullPage?: boolean;
+  clip?: { x: number; y: number; width: number; height: number };
+  stream?: boolean;
+}
+
+export interface ScreenshotResponse {
+  statusCode: number;
+  data: {
+    url: string;
+  };
+}
