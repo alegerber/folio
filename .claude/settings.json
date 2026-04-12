@@ -8,5 +8,35 @@
       "Bash(npm run lint)",
       "Bash(npm run typecheck)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cmd=$(jq -r '.tool_input.command // empty'); if echo \"$cmd\" | grep -qE 'git\\s+commit'; then branch=$(git branch --show-current 2>/dev/null); if [ \"$branch\" = \"main\" ]; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Direct commits to main are not allowed — use a feature branch and merge via pull request.\"}}'; elif [ \"$branch\" = \"beta\" ]; then stat=$(git diff --cached --shortstat 2>/dev/null); files=$(git diff --cached --name-only 2>/dev/null | wc -l | tr -d ' '); ins=$(echo \"$stat\" | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+' | head -1); del=$(echo \"$stat\" | grep -oE '[0-9]+ deletion' | grep -oE '[0-9]+' | head -1); changes=$(( ${ins:-0} + ${del:-0} )); if [ \"$files\" -gt 10 ] || [ \"$changes\" -gt 200 ]; then echo \"{\\\"hookSpecificOutput\\\":{\\\"hookEventName\\\":\\\"PreToolUse\\\",\\\"permissionDecision\\\":\\\"deny\\\",\\\"permissionDecisionReason\\\":\\\"Large change detected on beta ($files files, $changes lines changed). Prefer smaller commits or use a feature branch.\\\"}}\"; fi; fi; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); [ -n \"$f\" ] && echo \"$f\" | grep -qvE '(README|AGENTS)\\.md$' && echo \"$f\" | grep -qE '\\.(yml|yaml|conf|sql)$|Dockerfile' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"Structural file changed — check if README.md or AGENTS.md need to be updated.\"}}' || true"
+          },
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); if echo \"$f\" | grep -qE '\\.tsx?$'; then npx vitest run 2>&1 || exit 2; fi",
+            "statusMessage": "Running unit tests...",
+            "asyncRewake": true
+          }
+        ]
+      }
+    ]
   }
 }
