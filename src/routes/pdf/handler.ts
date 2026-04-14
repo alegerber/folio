@@ -12,6 +12,8 @@ import type { PdfService } from '../../services/pdf/PdfService.js';
 import type { StorageService, StoredPdf } from '../../services/storage/StorageService.js';
 import type { MetricsService } from '../../services/metrics/MetricsService.js';
 import type { PdfOperationsService } from '../../services/pdf/PdfOperationsService.js';
+import { assertSafeUrl, SsrfError } from '../../utils/ssrf.js';
+import { env } from '../../config/env.js';
 
 function sendStoredPdf(reply: FastifyReply, storedPdf: StoredPdf) {
   return reply.send({ statusCode: 200, data: storedPdf });
@@ -134,11 +136,30 @@ export function createGenerateHandler(
     request: FastifyRequest<{ Body: GenerateRequestInput }>,
     reply: FastifyReply,
   ) {
-    const { html, css, paper, options, stream } = request.body;
+    const { stream, ...generateInput } = request.body;
+
+    if (!generateInput.html && !generateInput.url) {
+      return reply.badRequest('Provide either html or url');
+    }
+    if (generateInput.html && generateInput.url) {
+      return reply.badRequest('Provide either html or url, not both');
+    }
+
+    if (generateInput.url && env.SSRF_PROTECTION) {
+      try {
+        await assertSafeUrl(generateInput.url);
+      } catch (err) {
+        if (err instanceof SsrfError) {
+          return reply.status(400).send({ statusCode: 400, error: err.message });
+        }
+        throw err;
+      }
+    }
+
     const start = Date.now();
 
     try {
-      const pdfBuffer = await pdfService.generate(html, css, paper, options);
+      const pdfBuffer = await pdfService.generate(generateInput);
 
       if (stream) {
         metricsService.recordSuccess(Date.now() - start, pdfBuffer.length);

@@ -16,9 +16,10 @@ Folio is built for teams already on AWS who want a PDF service that fits their e
 - S3 upload plus presigned URL responses
 - API key authentication
 - HTML to PDF generation with CSS, headers, and footers
+- URL rendering — navigate to a URL and render the page as PDF (supports cookies and custom headers)
 - PDF merge, split, compress, and PDF/A routes
 - Prometheus-style metrics
-- Planned URL rendering, screenshots, OpenAPI docs, and document conversion
+- Planned screenshots, OpenAPI docs, and document conversion
 
 ---
 
@@ -252,7 +253,7 @@ docker run -p 8080:8080 --env-file .env ghcr.io/alegerber/folio:latest
 
 See [`.plans/PLAN.md`](.plans/PLAN.md) for the full feature roadmap.
 
-Release automation and GHCR publishing are in place. Planned features (in order): URL rendering → Screenshot API → OpenAPI docs → LibreOffice conversion → Async webhooks → Queue-based scaling.
+Release automation and GHCR publishing are in place. Planned features (in order): Screenshot API → OpenAPI docs → LibreOffice conversion → Async webhooks → Queue-based scaling.
 
 ---
 

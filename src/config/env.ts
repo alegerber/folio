@@ -12,6 +12,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(8080),
   API_KEY: z.string().min(32).optional(),
   GHOSTSCRIPT_PATH: z.string().optional(),
+  SSRF_PROTECTION: z.string().optional().transform((v) => v !== 'false'),
 });
 
 export type Env = z.infer<typeof envSchema>;

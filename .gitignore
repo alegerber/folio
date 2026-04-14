@@ -34,7 +34,7 @@ Thumbs.db
 .plans
 
 # Claude
-.claude
+.claude/settings.local.json
 
 # AWS
 .aws-sam

@@ -181,4 +181,60 @@ describe('POST /pdf/generate', () => {
 
     expect(response.statusCode).toBe(200);
   });
+
+  it('accepts a url field instead of html', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/pdf/generate',
+      payload: {
+        url: 'https://example.com',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body).toMatchObject({
+      statusCode: 200,
+      data: STORED_PDF,
+    });
+  });
+
+  it('accepts url with cookies and extraHeaders', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/pdf/generate',
+      payload: {
+        url: 'https://example.com',
+        cookies: [{ name: 'session', value: 'abc', domain: 'example.com' }],
+        extraHeaders: { Authorization: 'Bearer token' },
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+  });
+
+  it('returns 400 when both html and url are provided', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/pdf/generate',
+      payload: {
+        html: '<html></html>',
+        url: 'https://example.com',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('returns 400 for invalid url', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/pdf/generate',
+      payload: {
+        url: 'not-a-url',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
 });

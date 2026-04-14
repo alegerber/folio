@@ -209,7 +209,7 @@ JSON
       "Effect": "Allow",
       "Action": "cloudformation:*",
       "Resource": [
-        "arn:aws:cloudformation:${REGION}:${AWS_ACCOUNT_ID}:stack/folio/*",
+        "arn:aws:cloudformation:${REGION}:${AWS_ACCOUNT_ID}:stack/folio*/*",
         "arn:aws:cloudformation:${REGION}:aws:transform/Serverless-2016-10-31"
       ]
     },

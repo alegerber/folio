@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'release/**']
 
 permissions:
   id-token: write
@@ -14,9 +14,21 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       api-url: ${{ steps.api-url.outputs.url }}
+      stack-name: ${{ steps.env.outputs.stack-name }}
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Derive environment
+        id: env
+        run: |
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          if [[ "$BRANCH" == "main" ]]; then
+            echo "stack-name=folio" >> "$GITHUB_OUTPUT"
+          else
+            SUFFIX=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9]/-/g')
+            echo "stack-name=folio-${SUFFIX}" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: aws-actions/setup-sam@v2
 
@@ -32,7 +44,7 @@ jobs:
       - name: SAM deploy
         run: |
           sam deploy \
-            --stack-name folio \
+            --stack-name "${{ steps.env.outputs.stack-name }}" \
             --image-repositories "FolioFunction=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.eu-central-1.amazonaws.com/${{ secrets.ECR_REPOSITORY }}" \
             --s3-bucket "${{ secrets.SAM_ARTIFACT_BUCKET }}" \
             --region eu-central-1 \
@@ -47,7 +59,7 @@ jobs:
         id: api-url
         run: |
           URL=$(aws cloudformation describe-stacks \
-            --stack-name folio \
+            --stack-name "${{ steps.env.outputs.stack-name }}" \
             --region eu-central-1 \
             --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
             --output text)
