@@ -27,7 +27,7 @@
     "@fastify/aws-lambda": "^6.4.0",
     "@fastify/sensible": "^6.0.4",
     "@sparticuz/chromium": "^143.0.4",
-    "fastify": "^5.8.4",
+    "fastify": "^5.8.5",
     "fastify-plugin": "^5.1.0",
     "pdf-lib": "^1.17.1",
     "pino-pretty": "^13.1.3",
