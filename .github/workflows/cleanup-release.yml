@@ -12,6 +12,11 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  # Node 20 action runtime is deprecated (GitHub forces Node 24 from 2026-06-16).
+  # Opt in now for actions without a Node 24 release yet (aws-actions/*); remove once they ship one.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   cleanup:
     name: Delete Release Stack
