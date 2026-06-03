@@ -27,8 +27,19 @@ Parameters:
 
   ReservedConcurrency:
     Type: Number
-    Default: 10
-    Description: Max concurrent Lambda executions — caps cost/DoS blast radius
+    Default: 0
+    Description: >-
+      Max concurrent Lambda executions (caps cost/DoS blast radius). 0 leaves it
+      unset — required when the account's concurrency limit has no headroom to
+      reserve (reserving would drop unreserved below AWS's minimum). Set a
+      positive value only on accounts with raised limits.
+
+# ── Conditions ────────────────────────────────────────────────────────────────
+
+Conditions:
+  # Only apply a reservation when explicitly requested; otherwise omit the
+  # property so deploys succeed on accounts without concurrency headroom.
+  SetReservedConcurrency: !Not [!Equals [!Ref ReservedConcurrency, 0]]
 
 # ── Globals ───────────────────────────────────────────────────────────────────
 
@@ -57,7 +68,7 @@ Resources:
       Dockerfile: Dockerfile
     Properties:
       PackageType: Image
-      ReservedConcurrentExecutions: !Ref ReservedConcurrency
+      ReservedConcurrentExecutions: !If [SetReservedConcurrency, !Ref ReservedConcurrency, !Ref 'AWS::NoValue']
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref S3BucketName
