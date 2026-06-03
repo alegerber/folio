@@ -107,4 +107,23 @@ describe('GET /metrics', () => {
     expect(body).toContain('pdf_generation_duration_ms_count 0');
     expect(body).toContain('pdf_size_bytes_count 0');
   });
+
+  it('records every request under concurrent generation', async () => {
+    const N = 5;
+    await Promise.all(
+      Array.from({ length: N }, () =>
+        app.inject({
+          method: 'POST',
+          url: '/pdf/generate',
+          payload: { html: '<html><body>concurrent</body></html>' },
+        }),
+      ),
+    );
+
+    const response = await app.inject({ method: 'GET', url: '/metrics' });
+    const body = response.body;
+
+    expect(body).toContain(`pdf_generation_requests_total{status="success"} ${N}`);
+    expect(body).toContain(`pdf_generation_duration_ms_count ${N}`);
+  });
 });
