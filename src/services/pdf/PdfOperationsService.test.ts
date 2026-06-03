@@ -137,6 +137,12 @@ describe('PdfOperationsService', () => {
       const source = await makePdf(1);
       await expect(service.compress(source)).rejects.toThrow('Ghostscript exited with code 1');
     });
+
+    it('runs Ghostscript with -dSAFER to sandbox untrusted PDFs', async () => {
+      const source = await makePdf(1);
+      await service.compress(source);
+      expect(spawn).toHaveBeenCalledWith('/usr/bin/gs', expect.arrayContaining(['-dSAFER']));
+    });
   });
 
   describe('convertToPdfA', () => {

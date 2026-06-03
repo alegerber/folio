@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { assertSafeUrl, SsrfError } from './ssrf.js';
+import { assertSafeUrl, isBlockedIp, isRequestUrlAllowed, SsrfError } from './ssrf.js';
 
 vi.mock('dns/promises', () => ({
   lookup: vi.fn(),
@@ -100,5 +100,66 @@ describe('assertSafeUrl — hostname resolution', () => {
   it('propagates DNS lookup errors', async () => {
     mockLookup.mockRejectedValue(new Error('ENOTFOUND'));
     await expect(assertSafeUrl('https://does-not-exist.invalid')).rejects.toThrow('ENOTFOUND');
+  });
+});
+
+describe('isBlockedIp — closes prior regex bypasses', () => {
+  it('blocks IPv4-mapped IPv6 loopback (::ffff:127.0.0.1)', () => {
+    expect(isBlockedIp('::ffff:127.0.0.1')).toBe(true);
+  });
+
+  it('blocks IPv4-mapped IPv6 cloud metadata (::ffff:169.254.169.254)', () => {
+    expect(isBlockedIp('::ffff:169.254.169.254')).toBe(true);
+  });
+
+  it('allows IPv4-mapped IPv6 of a public address (::ffff:8.8.8.8)', () => {
+    expect(isBlockedIp('::ffff:8.8.8.8')).toBe(false);
+  });
+
+  it('blocks IPv6 unique-local fd00::/8 (not only fc00:)', () => {
+    expect(isBlockedIp('fd00::1')).toBe(true);
+    expect(isBlockedIp('fdff:ffff::1')).toBe(true);
+  });
+
+  it('blocks the unspecified address 0.0.0.0', () => {
+    expect(isBlockedIp('0.0.0.0')).toBe(true);
+  });
+
+  it('allows ordinary public addresses', () => {
+    expect(isBlockedIp('8.8.8.8')).toBe(false);
+    expect(isBlockedIp('93.184.216.34')).toBe(false);
+  });
+
+  it('fails closed on unparseable input', () => {
+    expect(isBlockedIp('not-an-ip')).toBe(true);
+    expect(isBlockedIp('')).toBe(true);
+  });
+
+  it('blocks IPv4-mapped IPv6 loopback through assertSafeUrl', async () => {
+    await expect(assertSafeUrl('http://[::ffff:127.0.0.1]/')).rejects.toThrow(SsrfError);
+  });
+});
+
+describe('isRequestUrlAllowed — sub-resource interception guard', () => {
+  it('allows http(s) requests to public IP literals without DNS', async () => {
+    await expect(isRequestUrlAllowed('http://8.8.8.8/asset.png')).resolves.toBe(true);
+    expect(mockLookup).not.toHaveBeenCalled();
+  });
+
+  it('blocks requests to private/loopback/metadata literals', async () => {
+    await expect(isRequestUrlAllowed('http://127.0.0.1/')).resolves.toBe(false);
+    await expect(isRequestUrlAllowed('http://169.254.169.254/latest/meta-data/')).resolves.toBe(false);
+    await expect(isRequestUrlAllowed('http://10.0.0.5:8080/internal')).resolves.toBe(false);
+  });
+
+  it('blocks non-http(s) schemes and unparseable URLs', async () => {
+    await expect(isRequestUrlAllowed('file:///etc/passwd')).resolves.toBe(false);
+    await expect(isRequestUrlAllowed('gopher://x/')).resolves.toBe(false);
+    await expect(isRequestUrlAllowed('not a url')).resolves.toBe(false);
+  });
+
+  it('blocks a hostname that resolves to a private address', async () => {
+    mockLookup.mockResolvedValue({ address: '10.1.2.3', family: 4 });
+    await expect(isRequestUrlAllowed('http://internal.example.com/')).resolves.toBe(false);
   });
 });

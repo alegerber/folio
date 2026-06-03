@@ -189,4 +189,28 @@ describe('PdfService', () => {
     await expect(pdfService.generate({ html: '<html></html>' })).resolves.toBeInstanceOf(Buffer);
     expect(mockLaunch).toHaveBeenCalledTimes(2);
   });
+
+  describe('SSRF request interception', () => {
+    it('enables request interception and registers a guard by default', async () => {
+      await pdfService.generate({ html: '<html></html>' });
+      expect(mockSetRequestInterception).toHaveBeenCalledWith(true);
+      expect(mockPageOn).toHaveBeenCalledWith('request', expect.any(Function));
+    });
+
+    it('does not intercept when ssrfProtection is disabled', async () => {
+      const unguarded = new PdfService({ ssrfProtection: false });
+      await unguarded.generate({ html: '<html></html>' });
+      expect(mockSetRequestInterception).not.toHaveBeenCalled();
+    });
+
+    it('applies the shared default page timeout', async () => {
+      await pdfService.generate({ html: '<html></html>' });
+      expect(mockSetDefaultTimeout).toHaveBeenCalledWith(25_000);
+    });
+
+    it('resets the cached browser when Chromium disconnects', async () => {
+      await pdfService.generate({ html: '<html></html>' });
+      expect(mockBrowserOn).toHaveBeenCalledWith('disconnected', expect.any(Function));
+    });
+  });
 });

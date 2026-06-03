@@ -104,4 +104,26 @@ describe('MetricsService', () => {
       expect(output).toContain('pdf_size_bytes_bucket{le="+Inf"} 2');
     });
   });
+
+  describe('recordHttpRequest()', () => {
+    it('emits per-route counters and a shared duration histogram', () => {
+      metrics.recordHttpRequest('/pdf/merge', 120, 200);
+      metrics.recordHttpRequest('/pdf/merge', 80, 500);
+      metrics.recordHttpRequest('/pdf/split', 50, 200);
+      const out = metrics.format();
+      expect(out).toContain('# TYPE http_request_duration_ms histogram');
+      expect(out).toContain('http_requests_total{route="/pdf/merge",status="success"} 1');
+      expect(out).toContain('http_requests_total{route="/pdf/merge",status="error"} 1');
+      expect(out).toContain('http_requests_total{route="/pdf/split",status="success"} 1');
+      expect(out).toContain('http_request_duration_ms_count 3');
+    });
+
+    it('counts only 5xx as error', () => {
+      metrics.recordHttpRequest('/x', 10, 404);
+      metrics.recordHttpRequest('/x', 10, 500);
+      const out = metrics.format();
+      expect(out).toContain('http_requests_total{route="/x",status="success"} 1');
+      expect(out).toContain('http_requests_total{route="/x",status="error"} 1');
+    });
+  });
 });
