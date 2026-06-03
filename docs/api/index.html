@@ -48,18 +48,21 @@
           <h1>All current folio endpoints in one place.</h1>
           <p>
             When <code>API_KEY</code> is set, every route requires the
-            <code>X-Api-Key</code> header, including <code>/health</code> and
-            <code>/metrics</code>.
+            <code>X-Api-Key</code> header except <code>GET /health</code>, which
+            is always public so load balancers can probe it. <code>/metrics</code>
+            still requires the key.
           </p>
         </section>
 
         <section id="auth" class="endpoint-card">
           <h2>Authentication</h2>
           <p>
-            All routes are protected by a static API key when the
-            <code>API_KEY</code> environment variable is set. Clients must send the key in
-            the <code>X-Api-Key</code> request header. When <code>API_KEY</code> is unset,
-            auth is skipped for local development.
+            All routes except <code>GET /health</code> are protected by a static API key
+            when the <code>API_KEY</code> environment variable is set;
+            <code>/health</code> is always public for load-balancer probes. Clients must
+            send the key in the <code>X-Api-Key</code> request header. When
+            <code>API_KEY</code> is unset, auth is skipped for local development, but it is
+            required when <code>NODE_ENV=production</code>.
           </p>
           <div class="code-panel">
             <pre><code>curl -X POST http://localhost:8080/pdf/generate \
