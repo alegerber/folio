@@ -3,8 +3,14 @@ import { z } from 'zod';
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-    S3_BUCKET: z.string().min(1),
-    AWS_REGION: z.string().min(1),
+    S3_BUCKET: z
+      .string()
+      .min(3)
+      .max(63)
+      .regex(/^[a-z0-9][a-z0-9.-]*[a-z0-9]$/, 'Invalid S3 bucket name'),
+    AWS_REGION: z
+      .string()
+      .regex(/^[a-z]{2}-[a-z-]+-\d+$/, 'Invalid AWS region (e.g. eu-central-1)'),
     AWS_ACCESS_KEY_ID: z.string().optional(),
     AWS_SECRET_ACCESS_KEY: z.string().optional(),
     AWS_ENDPOINT_URL: z.url().optional(),

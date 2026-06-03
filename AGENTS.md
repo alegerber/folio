@@ -277,6 +277,8 @@ Converts an existing PDF to PDF/A using Ghostscript. **Route is only registered 
 
 8. **Ghostscript gating**: `POST /pdf/compress` always exists (pdf-lib fallback), while `POST /pdf/pdfa` is only registered when `GHOSTSCRIPT_PATH` is set (`opsService.canUseGhostscript`). Ghostscript operations write to unique temp files in `os.tmpdir()` and clean up via `Promise.allSettled` in a `finally` block — even if Ghostscript fails.
 
+9. **Deploy-safe IaC defaults**: template features that need account capacity or extra deploy-role permissions are gated behind CloudFormation `Conditions` and default **off**, so the standard deploy never fails on a missing capability. `ReservedConcurrency` (default `0`) is omitted via `AWS::NoValue` unless set; access logging (`EnableAccessLogs`, default `false`) only creates its CloudWatch log group when enabled — and the `github-actions-deploy` role gains `logs:` permissions only after `aws-setup.sh` is re-run. X-Ray (`Tracing: Active`) is on by default because it needs no extra deploy-role perms. Validate template changes with `sam validate --lint` before merging.
+
 ## Development
 
 ```bash
