@@ -1,4 +1,4 @@
-import type { PdfService } from '../pdf/PdfService.js';
+import { PdfService, PAGE_TIMEOUT_MS } from '../pdf/PdfService.js';
 import type { ScreenshotRequest } from '../../types/index.js';
 
 export class ScreenshotService {
@@ -6,16 +6,19 @@ export class ScreenshotService {
 
   async capture(request: ScreenshotRequest): Promise<{ buffer: Buffer; mimeType: string }> {
     const format = request.format ?? 'png';
-    const browser = await this.pdfService.getBrowser();
-    const page = await browser.newPage();
+    // newPage() applies the shared timeout and the SSRF request-interception
+    // guard, so screenshots get the same protection as PDF generation.
+    const page = await this.pdfService.newPage();
 
     try {
       await page.setViewport(request.viewport ?? { width: 1280, height: 720 });
 
       if (request.url) {
-        await page.goto(request.url, { waitUntil: 'networkidle0', timeout: 25_000 });
+        await page.goto(request.url, { waitUntil: 'networkidle0', timeout: PAGE_TIMEOUT_MS });
+      } else if (request.html) {
+        await page.setContent(request.html, { waitUntil: 'networkidle0', timeout: PAGE_TIMEOUT_MS });
       } else {
-        await page.setContent(request.html!, { waitUntil: 'networkidle0' });
+        throw new Error('capture() requires either html or url');
       }
 
       if (request.css) {

@@ -24,7 +24,7 @@ export async function buildApp() {
     },
   });
 
-  const pdfService = new PdfService();
+  const pdfService = new PdfService({ ssrfProtection: env.SSRF_PROTECTION });
   const metricsService = new MetricsService();
   const opsService = new PdfOperationsService(env.GHOSTSCRIPT_PATH);
   const screenshotService = new ScreenshotService(pdfService);

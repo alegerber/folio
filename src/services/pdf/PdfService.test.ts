@@ -8,19 +8,27 @@ const mockGoto = vi.fn().mockResolvedValue(undefined);
 const mockAddStyleTag = vi.fn().mockResolvedValue(undefined);
 const mockSetCookie = vi.fn().mockResolvedValue(undefined);
 const mockSetExtraHTTPHeaders = vi.fn().mockResolvedValue(undefined);
+const mockSetRequestInterception = vi.fn().mockResolvedValue(undefined);
+const mockSetDefaultTimeout = vi.fn();
+const mockPageOn = vi.fn();
 const mockNewPage = vi.fn().mockResolvedValue({
   setContent: mockSetContent,
   goto: mockGoto,
   addStyleTag: mockAddStyleTag,
   setCookie: mockSetCookie,
   setExtraHTTPHeaders: mockSetExtraHTTPHeaders,
+  setRequestInterception: mockSetRequestInterception,
+  setDefaultTimeout: mockSetDefaultTimeout,
+  on: mockPageOn,
   pdf: mockPdf,
   close: mockClose,
 });
 const mockBrowserClose = vi.fn().mockResolvedValue(undefined);
+const mockBrowserOn = vi.fn();
 const mockLaunch = vi.fn().mockResolvedValue({
   newPage: mockNewPage,
   close: mockBrowserClose,
+  on: mockBrowserOn,
 });
 
 vi.mock('puppeteer-core', () => ({
@@ -50,7 +58,7 @@ describe('PdfService', () => {
 
     const result = await pdfService.generate({ html });
 
-    expect(mockSetContent).toHaveBeenCalledWith(html, { waitUntil: 'networkidle0' });
+    expect(mockSetContent).toHaveBeenCalledWith(html, { waitUntil: 'networkidle0', timeout: 25_000 });
     expect(mockGoto).not.toHaveBeenCalled();
     expect(mockAddStyleTag).not.toHaveBeenCalled();
     expect(mockPdf).toHaveBeenCalledOnce();
@@ -97,7 +105,7 @@ describe('PdfService', () => {
 
     await pdfService.generate({ html, css });
 
-    expect(mockSetContent).toHaveBeenCalledWith(html, { waitUntil: 'networkidle0' });
+    expect(mockSetContent).toHaveBeenCalledWith(html, { waitUntil: 'networkidle0', timeout: 25_000 });
     expect(mockAddStyleTag).toHaveBeenCalledWith({ content: css });
   });
 
@@ -174,6 +182,7 @@ describe('PdfService', () => {
       .mockResolvedValueOnce({
         newPage: mockNewPage,
         close: mockBrowserClose,
+        on: mockBrowserOn,
       });
 
     await expect(pdfService.generate({ html: '<html></html>' })).rejects.toThrow('Chromium failed to start');

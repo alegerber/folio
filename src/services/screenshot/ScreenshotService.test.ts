@@ -18,9 +18,9 @@ const mockNewPage = vi.fn().mockResolvedValue({
   close: mockPageClose,
 });
 
-const mockBrowser = { newPage: mockNewPage };
-const mockGetBrowser = vi.fn().mockResolvedValue(mockBrowser);
-const mockPdfService = { getBrowser: mockGetBrowser } as unknown as PdfService;
+// ScreenshotService now obtains hardened pages via pdfService.newPage(), which
+// applies the shared timeout and the SSRF request-interception guard.
+const mockPdfService = { newPage: mockNewPage } as unknown as PdfService;
 
 describe('ScreenshotService', () => {
   let screenshotService: ScreenshotService;
@@ -37,6 +37,7 @@ describe('ScreenshotService', () => {
 
     expect(mockSetContent).toHaveBeenCalledWith('<html><body>Hello</body></html>', {
       waitUntil: 'networkidle0',
+      timeout: 25_000,
     });
     expect(mockGoto).not.toHaveBeenCalled();
     expect(mockScreenshot).toHaveBeenCalledWith(
@@ -134,11 +135,10 @@ describe('ScreenshotService', () => {
     expect(mockPageClose).toHaveBeenCalledOnce();
   });
 
-  it('reuses the browser from PdfService', async () => {
+  it('requests a fresh hardened page from PdfService per capture', async () => {
     await screenshotService.capture({ html: '<html></html>' });
     await screenshotService.capture({ html: '<html></html>' });
 
-    expect(mockGetBrowser).toHaveBeenCalledTimes(2);
     expect(mockNewPage).toHaveBeenCalledTimes(2);
   });
 });
