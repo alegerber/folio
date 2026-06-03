@@ -9,11 +9,16 @@ permissions:
   contents: read
   packages: write
 
+env:
+  # Node 20 action runtime is deprecated (GitHub forces Node 24 from 2026-06-16).
+  # Opt in now for actions without a Node 24 release yet (docker/*); remove once they ship one.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: docker/setup-buildx-action@v3
 
@@ -45,7 +50,7 @@ jobs:
             type=raw,value=latest-full
 
       - name: Build and push standard image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           target: server
@@ -55,7 +60,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Build and push full image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           target: server-full

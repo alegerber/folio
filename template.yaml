@@ -25,6 +25,11 @@ Parameters:
     Type: Number
     Default: 3600
 
+  ReservedConcurrency:
+    Type: Number
+    Default: 10
+    Description: Max concurrent Lambda executions — caps cost/DoS blast radius
+
 # ── Globals ───────────────────────────────────────────────────────────────────
 
 Globals:
@@ -34,6 +39,7 @@ Globals:
     Architectures: [x86_64]
     Environment:
       Variables:
+        NODE_ENV:                   production
         S3_BUCKET:                  !Ref S3BucketName
         GHOSTSCRIPT_PATH:           /usr/bin/gs
         LOG_LEVEL:                  !Ref LogLevel
@@ -51,6 +57,7 @@ Resources:
       Dockerfile: Dockerfile
     Properties:
       PackageType: Image
+      ReservedConcurrentExecutions: !Ref ReservedConcurrency
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref S3BucketName

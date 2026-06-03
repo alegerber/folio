@@ -7,7 +7,14 @@ const proxyPromise = buildApp().then((app) =>
   awsLambdaFastify(app, { binaryMimeTypes: ['application/pdf'] }),
 );
 
-export const handler = async (event: unknown, context: unknown) => {
+// Derive the handler's parameter types from the proxy itself instead of casting
+// `unknown`, so event/context stay type-checked against @fastify/aws-lambda.
+type Proxy = Awaited<typeof proxyPromise>;
+
+export const handler = async (
+  event: Parameters<Proxy>[0],
+  context: Parameters<Proxy>[1],
+) => {
   const proxy = await proxyPromise;
-  return proxy(event as Parameters<typeof proxy>[0], context as Parameters<typeof proxy>[1]);
+  return proxy(event, context);
 };

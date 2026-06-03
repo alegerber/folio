@@ -105,6 +105,9 @@ export class StorageService {
         Key: key,
         Body: pdfBuffer,
         ContentType: 'application/pdf',
+        // Objects are UUID-addressed and never mutated, so they are safe to
+        // cache aggressively behind the (short-lived) presigned URL.
+        CacheControl: 'private, max-age=31536000, immutable',
       }),
     );
 
@@ -130,6 +133,7 @@ export class StorageService {
         Key: key,
         Body: buffer,
         ContentType: contentType,
+        CacheControl: 'private, max-age=31536000, immutable',
       }),
     );
 

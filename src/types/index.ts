@@ -24,25 +24,6 @@ export interface CookieParam {
   domain: string;
 }
 
-export interface GenerateRequest {
-  html?: string;
-  url?: string;
-  css?: string;
-  paper?: PaperOptions;
-  options?: PdfOptions;
-  cookies?: CookieParam[];
-  extraHeaders?: Record<string, string>;
-  stream?: boolean;
-}
-
-export interface GenerateResponse {
-  statusCode: number;
-  data: {
-    id: string;
-    url: string;
-  };
-}
-
 export interface ScreenshotRequest {
   html?: string;
   url?: string;
@@ -53,11 +34,4 @@ export interface ScreenshotRequest {
   fullPage?: boolean;
   clip?: { x: number; y: number; width: number; height: number };
   stream?: boolean;
-}
-
-export interface ScreenshotResponse {
-  statusCode: number;
-  data: {
-    url: string;
-  };
 }
