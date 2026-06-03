@@ -98,9 +98,9 @@ echo ""
 # ── Auth: 401 when API_KEY is configured and header is missing ────────────────
 
 if [ -n "${API_KEY:-}" ]; then
-  echo "--- Auth: missing x-api-key on GET /health → 401 ---"
+  echo "--- Auth: GET /health is public (no key) → 200 ---"
   HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/health")
-  assert_eq "HTTP 401 (health, no key)" "401" "$HTTP_CODE"
+  assert_eq "HTTP 200 (health, no key — public for load balancers)" "200" "$HTTP_CODE"
 
   echo "--- Auth: missing x-api-key on GET /metrics → 401 ---"
   HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/metrics")
