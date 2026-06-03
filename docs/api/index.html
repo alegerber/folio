@@ -38,6 +38,7 @@
             <a href="#split"><span class="method method-post">POST</span> /pdf/split</a>
             <a href="#compress"><span class="method method-post">POST</span> /pdf/compress</a>
             <a href="#pdfa"><span class="method method-post">POST</span> /pdf/pdfa</a>
+            <a href="#screenshot"><span class="method method-post">POST</span> /screenshot</a>
           </nav>
         </div>
       </aside>
@@ -520,6 +521,74 @@
               <pre><code>curl -s -X POST http://localhost:8080/pdf/pdfa \
   -H "Content-Type: application/json" \
   -d '{"id": "PDF_ID", "conformance": "2b"}' | jq .</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="screenshot" class="endpoint-card">
+          <div class="endpoint-heading">
+            <span class="method method-post">POST</span>
+            <code>/screenshot</code>
+          </div>
+          <p>
+            Render raw HTML or a URL to an image (PNG, JPEG, or WebP). Provide
+            <code>html</code> <strong>or</strong> <code>url</code> — the two fields
+            are mutually exclusive.
+          </p>
+
+          <h3>Request body</h3>
+          <div class="code-panel">
+            <pre><code>{
+  "html": "&lt;html&gt;&lt;body&gt;&lt;h1&gt;Hello&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;",
+  "css": "body { font-family: Arial, sans-serif; }",
+  "viewport": { "width": 1280, "height": 720 },
+  "format": "png",
+  "quality": 80,
+  "fullPage": false,
+  "clip": { "x": 0, "y": 0, "width": 400, "height": 300 },
+  "stream": false
+}</code></pre>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>html</code></td><td>string</td><td>html or url</td><td>HTML to render (mutually exclusive with <code>url</code>)</td></tr>
+              <tr><td><code>url</code></td><td>string (URL)</td><td>html or url</td><td>URL to render; subject to the server SSRF policy</td></tr>
+              <tr><td><code>css</code></td><td>string</td><td>no</td><td>Extra CSS injected before capture</td></tr>
+              <tr><td><code>viewport</code></td><td><code>{ width, height }</code></td><td>no</td><td>Viewport in px (default 1280×720, max 3840×2160)</td></tr>
+              <tr><td><code>format</code></td><td><code>png</code> | <code>jpeg</code> | <code>webp</code></td><td>no</td><td>Image format, default <code>png</code></td></tr>
+              <tr><td><code>quality</code></td><td>number</td><td>no</td><td>1–100; ignored for <code>png</code></td></tr>
+              <tr><td><code>fullPage</code></td><td>boolean</td><td>no</td><td>Capture the full scrollable page, default <code>false</code></td></tr>
+              <tr><td><code>clip</code></td><td><code>{ x, y, width, height }</code></td><td>no</td><td>Capture only a sub-region</td></tr>
+              <tr><td><code>stream</code></td><td>boolean</td><td>no</td><td><code>true</code> returns binary, <code>false</code> returns a stored image URL</td></tr>
+            </tbody>
+          </table>
+
+          <h3>Response when <code>stream: false</code></h3>
+          <div class="code-panel">
+            <pre><code>{ "statusCode": 200, "data": { "url": "https://s3.amazonaws.com/...?X-Amz-Signature=..." } }</code></pre>
+          </div>
+
+          <h3>Response when <code>stream: true</code></h3>
+          <ul class="compact-list">
+            <li><code>Content-Type: image/png</code> (or <code>image/jpeg</code>, <code>image/webp</code>)</li>
+            <li><code>Content-Disposition: attachment; filename="screenshot.png"</code></li>
+          </ul>
+
+          <div class="example-block">
+            <span class="example-label">Example</span>
+            <div class="code-panel">
+              <pre><code>curl -s -X POST http://localhost:8080/screenshot \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com", "format": "png"}' | jq .</code></pre>
             </div>
           </div>
         </section>
