@@ -36,7 +36,7 @@ describe('ScreenshotService', () => {
     });
 
     expect(mockSetContent).toHaveBeenCalledWith('<html><body>Hello</body></html>', {
-      waitUntil: 'networkidle0',
+      waitUntil: 'load',
       timeout: 25_000,
     });
     expect(mockGoto).not.toHaveBeenCalled();

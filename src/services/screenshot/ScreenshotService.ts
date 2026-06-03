@@ -16,7 +16,9 @@ export class ScreenshotService {
       if (request.url) {
         await page.goto(request.url, { waitUntil: 'networkidle0', timeout: PAGE_TIMEOUT_MS });
       } else if (request.html) {
-        await page.setContent(request.html, { waitUntil: 'networkidle0', timeout: PAGE_TIMEOUT_MS });
+        // puppeteer 25 removed networkidle* from setContent; 'load' still waits
+        // for referenced resources (images/CSS/fonts) via the window load event.
+        await page.setContent(request.html, { waitUntil: 'load', timeout: PAGE_TIMEOUT_MS });
       } else {
         throw new Error('capture() requires either html or url');
       }

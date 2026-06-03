@@ -268,7 +268,7 @@ Release automation and GHCR publishing are in place. Planned features (in order)
 | Layer | Package | Version |
 |---|---|---|
 | Framework | Fastify | 5.x |
-| PDF rendering | puppeteer-core + @sparticuz/chromium | 24.x / 143.x |
+| PDF rendering | puppeteer-core + @sparticuz/chromium | 25.x / 149.x |
 | PDF merging | pdf-lib | 1.x |
 | Validation | Zod | 4.x |
 | Storage | @aws-sdk/client-s3 | 3.x |

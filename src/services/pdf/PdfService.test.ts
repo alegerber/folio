@@ -58,7 +58,7 @@ describe('PdfService', () => {
 
     const result = await pdfService.generate({ html });
 
-    expect(mockSetContent).toHaveBeenCalledWith(html, { waitUntil: 'networkidle0', timeout: 25_000 });
+    expect(mockSetContent).toHaveBeenCalledWith(html, { waitUntil: 'load', timeout: 25_000 });
     expect(mockGoto).not.toHaveBeenCalled();
     expect(mockAddStyleTag).not.toHaveBeenCalled();
     expect(mockPdf).toHaveBeenCalledOnce();
@@ -105,7 +105,7 @@ describe('PdfService', () => {
 
     await pdfService.generate({ html, css });
 
-    expect(mockSetContent).toHaveBeenCalledWith(html, { waitUntil: 'networkidle0', timeout: 25_000 });
+    expect(mockSetContent).toHaveBeenCalledWith(html, { waitUntil: 'load', timeout: 25_000 });
     expect(mockAddStyleTag).toHaveBeenCalledWith({ content: css });
   });
 
