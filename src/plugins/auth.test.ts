@@ -49,6 +49,26 @@ describe('authPlugin', () => {
       expect(response.statusCode).toBe(200);
       expect(response.json()).toEqual({ ok: true });
     });
+
+    it('returns 401 for an empty x-api-key header', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/test',
+        headers: { 'x-api-key': '' },
+      });
+      expect(response.statusCode).toBe(401);
+    });
+
+    it('returns 401 for a wrong key of the same length (timing-safe compare path)', async () => {
+      // Same length as the real key, so the length guard passes and
+      // timingSafeEqual itself must reject the content.
+      const response = await app.inject({
+        method: 'GET',
+        url: '/test',
+        headers: { 'x-api-key': 'x'.repeat(TEST_API_KEY.length) },
+      });
+      expect(response.statusCode).toBe(401);
+    });
   });
 
   describe('when API_KEY is not set', () => {
