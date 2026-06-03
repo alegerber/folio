@@ -25,6 +25,11 @@ success() { printf '%s✓%s  %s\n'    "$green"  "$reset" "$*"; }
 warn()    { printf '%s!%s  %s\n'    "$yellow" "$reset" "$*"; }
 die()     { printf '%s✗%s  %s\n'    "$red"    "$reset" "$*" >&2; exit 1; }
 
+# Report the failing step on any error. No destructive rollback: every step is
+# idempotent (it checks for existing resources before creating), so the script
+# is safe to re-run after fixing the cause.
+trap 'rc=$?; [ "$rc" -ne 0 ] && printf "%s✗%s  Setup failed at line %s (exit %s). Already-created resources are kept; fix the cause and re-run — all steps are idempotent.\n" "$red" "$reset" "$LINENO" "$rc" >&2' ERR
+
 # Wrapper — injects --profile on every aws call once AWS_PROFILE is set.
 # Falls back to the ambient credentials for check_prereqs (aws --version).
 aws() {

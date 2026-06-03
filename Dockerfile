@@ -1,5 +1,7 @@
 # Stage 1: build
-FROM node:24-slim AS builder
+# Pinned by digest for reproducibility (node:24-slim, linux/amd64 — folio builds
+# x86_64 only). Update the digest with: docker manifest inspect node:24-slim
+FROM node:24-slim@sha256:cbd8bcbdfd0d148205c9449dff3ca3c9c94d73f393a0e03ef1c8d3846c5038bf AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -8,7 +10,9 @@ COPY src/ src/
 RUN npm run build
 
 # Stage 2: production image used by local Docker, Lambda deploys, and GHCR
-FROM public.ecr.aws/lambda/nodejs:24 AS server
+# Pinned by digest (public.ecr.aws/lambda/nodejs:24, linux/amd64 — Lambda runs
+# x86_64). Update with: docker manifest inspect public.ecr.aws/lambda/nodejs:24
+FROM public.ecr.aws/lambda/nodejs:24@sha256:0ef0587366631c01cda7646c4dbd0509f622fecc56ccbed63c8dca65c26b5b2b AS server
 WORKDIR /var/task
 RUN dnf install -y \
       alsa-lib \
