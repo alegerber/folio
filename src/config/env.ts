@@ -15,6 +15,8 @@ const envSchema = z
     API_KEY: z.string().min(32).optional(),
     GHOSTSCRIPT_PATH: z.string().optional(),
     SSRF_PROTECTION: z.string().optional().transform((v) => v !== 'false'),
+    RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
+    RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   })
   // Auth is optional for local/dev, but must be configured in production so a
   // deployment can never silently come up unauthenticated.

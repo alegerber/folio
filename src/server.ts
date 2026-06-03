@@ -1,5 +1,6 @@
 import { STATUS_CODES } from 'node:http';
 import Fastify, { type FastifyError } from 'fastify';
+import rateLimit from '@fastify/rate-limit';
 import { env } from './config/env.js';
 import { authPlugin } from './plugins/auth.js';
 import { s3Plugin } from './plugins/s3.js';
@@ -48,6 +49,13 @@ export async function buildApp() {
   const screenshotService = new ScreenshotService(pdfService);
 
   await fastify.register(sensiblePlugin);
+  // Coarse in-memory rate limit in front of the heavyweight Chromium pipeline.
+  // Registered before auth so unauthenticated floods are limited too. Note:
+  // per-instance only — on Lambda the effective limit scales with instances.
+  await fastify.register(rateLimit, {
+    max: env.RATE_LIMIT_MAX ?? 60,
+    timeWindow: env.RATE_LIMIT_WINDOW_MS ?? 60_000,
+  });
   await fastify.register(authPlugin);
   await fastify.register(s3Plugin);
   await fastify.register(healthRoutes);

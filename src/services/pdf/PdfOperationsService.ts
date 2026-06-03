@@ -71,21 +71,39 @@ export function parsePageRange(expr: string, totalPages: number): number[] {
   return indices;
 }
 
+// Upper bound on a single Ghostscript run; a hostile or pathological PDF must
+// not be able to pin the process indefinitely.
+const GHOSTSCRIPT_TIMEOUT_MS = 30_000;
+
 function runGhostscript(gsPath: string, args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
     const gs = spawn(gsPath, args);
     let stderr = '';
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      settled = true;
+      gs.kill('SIGKILL');
+      reject(new Error(`Ghostscript timed out after ${GHOSTSCRIPT_TIMEOUT_MS}ms`));
+    }, GHOSTSCRIPT_TIMEOUT_MS);
+
     gs.stderr.on('data', (data: Buffer) => {
       stderr += data.toString();
     });
     gs.on('close', (code: number | null) => {
+      if (settled) return;
+      clearTimeout(timer);
       if (code === 0) {
         resolve();
       } else {
         reject(new Error(`Ghostscript exited with code ${code}: ${stderr}`));
       }
     });
-    gs.on('error', reject);
+    gs.on('error', (err) => {
+      if (settled) return;
+      clearTimeout(timer);
+      reject(err);
+    });
   });
 }
 
@@ -134,6 +152,7 @@ export class PdfOperationsService {
     try {
       await writeFile(inPath, sourceBytes);
       await runGhostscript(this.ghostscriptPath!, [
+        '-dSAFER',
         '-sDEVICE=pdfwrite',
         '-dCompatibilityLevel=1.4',
         '-dPDFSETTINGS=/ebook',
@@ -158,6 +177,7 @@ export class PdfOperationsService {
     try {
       await writeFile(inPath, sourceBytes);
       await runGhostscript(this.ghostscriptPath!, [
+        '-dSAFER',
         `-dPDFA=${level}`,
         '-dBATCH',
         '-dNOPAUSE',
