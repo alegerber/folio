@@ -143,6 +143,41 @@ describe('PdfOperationsService', () => {
       await service.compress(source);
       expect(spawn).toHaveBeenCalledWith('/usr/bin/gs', expect.arrayContaining(['-dSAFER']));
     });
+
+    it('surfaces captured stderr in the failure error', async () => {
+      const proc = new EventEmitter() as MockGsProcess;
+      proc.stderr = new EventEmitter();
+      setImmediate(() => {
+        proc.stderr.emit('data', Buffer.from('GS fatal: cannot process PDF'));
+        proc.emit('close', 1);
+      });
+      vi.mocked(spawn).mockReturnValue(asSpawnReturn(proc));
+      const source = await makePdf(1);
+
+      await expect(service.compress(source)).rejects.toThrow('GS fatal: cannot process PDF');
+    });
+
+    it('kills Ghostscript and rejects when it exceeds the timeout', async () => {
+      const source = await makePdf(1);
+      vi.useFakeTimers();
+      try {
+        const proc = Object.assign(new EventEmitter(), {
+          stderr: new EventEmitter(),
+          kill: vi.fn(),
+        }) as unknown as MockGsProcess & { kill: ReturnType<typeof vi.fn> };
+        // never emits 'close' → the timeout must fire
+        vi.mocked(spawn).mockReturnValue(asSpawnReturn(proc));
+
+        const result = service.compress(source);
+        const rejection = expect(result).rejects.toThrow('timed out');
+        await vi.advanceTimersByTimeAsync(30_000);
+        await rejection;
+
+        expect(proc.kill).toHaveBeenCalledWith('SIGKILL');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   describe('convertToPdfA', () => {

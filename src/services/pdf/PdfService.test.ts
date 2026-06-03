@@ -190,6 +190,18 @@ describe('PdfService', () => {
     expect(mockLaunch).toHaveBeenCalledTimes(2);
   });
 
+  it('launches the browser only once under concurrent getBrowser calls', async () => {
+    const [b1, b2, b3] = await Promise.all([
+      pdfService.getBrowser(),
+      pdfService.getBrowser(),
+      pdfService.getBrowser(),
+    ]);
+
+    expect(mockLaunch).toHaveBeenCalledOnce();
+    expect(b1).toBe(b2);
+    expect(b2).toBe(b3);
+  });
+
   describe('SSRF request interception', () => {
     it('enables request interception and registers a guard by default', async () => {
       await pdfService.generate({ html: '<html></html>' });

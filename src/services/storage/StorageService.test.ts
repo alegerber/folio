@@ -76,4 +76,41 @@ describe('StorageService', () => {
       'PDF not found',
     );
   });
+
+  it('propagates non-404 S3 errors from getUrl instead of masking them as not-found', async () => {
+    const accessDenied = Object.assign(new Error('denied'), { name: 'AccessDenied' });
+    vi.mocked(mockS3Client.send).mockRejectedValueOnce(accessDenied);
+
+    await expect(storageService.getUrl('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11')).rejects.toThrow('denied');
+  });
+
+  it('uploads an image and returns a presigned URL', async () => {
+    const stored = await storageService.uploadImage(Buffer.from('PNG'), 'png', 'image/png');
+
+    expect(stored).toMatchObject({ id: expect.any(String), url: expect.stringContaining('https://') });
+    expect(mockS3Client.send).toHaveBeenCalledOnce();
+  });
+
+  it('propagates S3 errors when uploadImage fails', async () => {
+    vi.mocked(mockS3Client.send).mockRejectedValueOnce(new Error('S3 upload failed'));
+
+    await expect(
+      storageService.uploadImage(Buffer.from('PNG'), 'png', 'image/png'),
+    ).rejects.toThrow('S3 upload failed');
+  });
+
+  it('propagates S3 errors when upload fails', async () => {
+    vi.mocked(mockS3Client.send).mockRejectedValueOnce(new Error('PutObject failed'));
+
+    await expect(storageService.upload(Buffer.from('%PDF-1.4'))).rejects.toThrow('PutObject failed');
+  });
+
+  it('throws not found when downloading a missing object', async () => {
+    const noSuchKey = Object.assign(new Error('no key'), { name: 'NoSuchKey' });
+    vi.mocked(mockS3Client.send).mockRejectedValueOnce(noSuchKey);
+
+    await expect(storageService.download('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11')).rejects.toThrow(
+      'PDF not found',
+    );
+  });
 });
