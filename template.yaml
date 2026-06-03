@@ -34,12 +34,24 @@ Parameters:
       reserve (reserving would drop unreserved below AWS's minimum). Set a
       positive value only on accounts with raised limits.
 
+  EnableAccessLogs:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: >-
+      Enable API Gateway access logging to CloudWatch. Default "false" so the
+      deploy needs no logs: permissions. To enable: re-run scripts/aws-setup.sh
+      (grants the deploy role logs: perms) THEN deploy with EnableAccessLogs=true.
+
 # ── Conditions ────────────────────────────────────────────────────────────────
 
 Conditions:
   # Only apply a reservation when explicitly requested; otherwise omit the
   # property so deploys succeed on accounts without concurrency headroom.
   SetReservedConcurrency: !Not [!Equals [!Ref ReservedConcurrency, 0]]
+  # Access logging is opt-in: the log group (and thus logs: permissions) only
+  # materialises when explicitly enabled, so the default deploy stays green.
+  AccessLogsEnabled: !Equals [!Ref EnableAccessLogs, "true"]
 
 # ── Globals ───────────────────────────────────────────────────────────────────
 
@@ -48,6 +60,7 @@ Globals:
     MemorySize: 2048
     Timeout: 120
     Architectures: [x86_64]
+    Tracing: Active  # AWS X-Ray for the Lambda (deploy-safe: uses lambda:* + iam on folio*)
     Environment:
       Variables:
         NODE_ENV:                   production
@@ -84,6 +97,28 @@ Resources:
           Properties:
             Path: /
             Method: ANY
+
+  # Declaring the implicit API explicitly under its conventional logical id lets
+  # us attach access logging without changing the API or its URL. When disabled,
+  # AccessLogSettings is omitted, so it behaves exactly like the implicit API.
+  ServerlessHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: "$default"
+      AccessLogSettings: !If
+        - AccessLogsEnabled
+        - DestinationArn: !GetAtt AccessLogGroup.Arn
+          Format: '{"requestId":"$context.requestId","ip":"$context.http.sourceIp","method":"$context.http.method","path":"$context.http.path","status":"$context.status","latencyMs":"$context.responseLatency","integrationError":"$context.integrationErrorMessage"}'
+        - !Ref "AWS::NoValue"
+
+  # Created only when access logging is enabled, so the default deploy needs no
+  # logs: permissions on the deploy role.
+  AccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: AccessLogsEnabled
+    Properties:
+      LogGroupName: !Sub "/aws/vendedlogs/http-api/${AWS::StackName}"
+      RetentionInDays: 30
 
 # ── Outputs ───────────────────────────────────────────────────────────────────
 

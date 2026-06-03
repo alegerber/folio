@@ -238,6 +238,12 @@ If deletion fails again, inspect the event log for the specific resource blockin
 | Architecture | x86_64 |
 | Package type | Image |
 
+**Observability**
+
+- **AWS X-Ray tracing** is enabled on the function (`Tracing: Active`) — no extra setup.
+- **API Gateway access logs** are opt-in via the `EnableAccessLogs` SAM parameter (default `false`). They write to a CloudWatch log group, which the deploy role may create only after you re-run `./scripts/aws-setup.sh` (it grants the needed `logs:` permissions); then deploy with `--parameter-overrides EnableAccessLogs=true`. Left off by default so the standard deploy needs no `logs:` permissions.
+- `ReservedConcurrency` (default `0` = unset) caps concurrent executions on accounts with raised limits.
+
 ### Docker / ECS / Fly.io / Railway
 
 Build the image and run anywhere Docker is supported:
