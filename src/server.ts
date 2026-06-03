@@ -17,6 +17,8 @@ import { ScreenshotService } from './services/screenshot/ScreenshotService.js';
 
 export async function buildApp() {
   const fastify = Fastify({
+    // Cap request bodies (html/css/cookies) regardless of per-field limits.
+    bodyLimit: 10 * 1024 * 1024,
     logger: {
       level: env.LOG_LEVEL,
       transport:
