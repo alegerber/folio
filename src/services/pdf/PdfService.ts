@@ -121,7 +121,9 @@ export class PdfService {
       if (url) {
         await page.goto(url, { waitUntil: 'networkidle0', timeout: PAGE_TIMEOUT_MS });
       } else if (html) {
-        await page.setContent(html, { waitUntil: 'networkidle0', timeout: PAGE_TIMEOUT_MS });
+        // puppeteer 25 removed networkidle* from setContent; 'load' still waits
+        // for referenced resources (images/CSS/fonts) via the window load event.
+        await page.setContent(html, { waitUntil: 'load', timeout: PAGE_TIMEOUT_MS });
       } else {
         throw new Error('generate() requires either html or url');
       }

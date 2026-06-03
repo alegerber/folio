@@ -10,7 +10,7 @@ Runs as both a Docker container (local dev) and an AWS Lambda container image (p
 | Layer | Package | Version |
 |---|---|---|
 | Framework | Fastify | 5.x |
-| PDF rendering | puppeteer-core + @sparticuz/chromium | 24.x / 143.x |
+| PDF rendering | puppeteer-core + @sparticuz/chromium | 25.x / 149.x |
 | PDF manipulation | pdf-lib | 1.x |
 | PDF compression / PDF/A | Ghostscript (optional, via `GHOSTSCRIPT_PATH`) | — |
 | Validation | Zod | 4.x |
@@ -270,6 +270,8 @@ Converts an existing PDF to PDF/A using Ghostscript. **Route is only registered 
 5. **Zod v4 + AJV compat**: `z.toJSONSchema()` emits a `$schema: "https://json-schema.org/draft/2020-12/schema"` field. Fastify's AJV uses draft-07 and can't resolve that ref — it is stripped in `schema.ts` before passing to Fastify.
 
 6. **`--no-sandbox`**: `@sparticuz/chromium` sets this automatically via its `args` export. Always use `chromium.args`, `chromium.executablePath()`, and `chromium.headless` when launching.
+
+   **Version coupling:** `puppeteer-core` and `@sparticuz/chromium` must target the **same Chromium major** (currently 149: `puppeteer-core@25.1.0` ↔ `@sparticuz/chromium@149`). puppeteer-core changes its preferred Chromium even on *minor* bumps (25.0→148, 25.1→149), and `@sparticuz/chromium`'s major *is* the Chromium major, so Dependabot must bump both together — check `pptr.dev/chromium-support` and that `@sparticuz/chromium` actually publishes that major (it skips some, e.g. 144–146). `@sparticuz/chromium@149` is ESM-only; folio loads it via `await import()`, which esbuild preserves in the CJS bundle, so that works — but a 24→25 bump also required switching `page.setContent`'s `waitUntil` from `networkidle0` (removed from setContent in v25) to `load`.
 
 7. **`platform: linux/amd64`** in `docker-compose.yml`: `@sparticuz/chromium` ships only x86_64 binaries. On Apple Silicon, Docker must build/run under Rosetta 2 emulation.
 
