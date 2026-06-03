@@ -334,6 +334,51 @@ else
   echo ""
 fi
 
+# ── POST /screenshot → S3 URL ─────────────────────────────────────────────────
+
+echo "--- POST /screenshot (stream: false) ---"
+RESP=$(curl -s -X POST "$BASE/screenshot" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{"html": "<html><body><h1>Smoke Shot</h1></body></html>", "format": "png"}')
+STATUS_CODE=$(echo "$RESP" | grep -o '"statusCode":[0-9]*' | grep -o '[0-9]*')
+assert_eq "statusCode 200" "200" "$STATUS_CODE"
+assert_contains "screenshot response contains url" '"url"' "$RESP"
+
+echo ""
+
+# ── POST /screenshot → binary stream ─────────────────────────────────────────
+
+echo "--- POST /screenshot (stream: true) ---"
+TMP_PNG=$(mktemp /tmp/smoke-test-shot-XXXXXX.png)
+HTTP_CODE=$(curl -s -X POST "$BASE/screenshot" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{"html": "<html><body><h1>Smoke Shot</h1></body></html>", "format": "png", "stream": true}' \
+  -o "$TMP_PNG" -w "%{http_code}")
+assert_eq "HTTP 200" "200" "$HTTP_CODE"
+
+# PNG signature is the bytes \x89 P N G — check for "PNG" in the first 8 bytes.
+if head -c 8 "$TMP_PNG" 2>/dev/null | grep -q "PNG"; then
+  ok "screenshot response is a valid PNG"
+else
+  fail "screenshot response is not a valid PNG"
+fi
+rm -f "$TMP_PNG"
+
+echo ""
+
+# ── POST /screenshot validation: invalid format → 400 ────────────────────────
+
+echo "--- POST /screenshot (invalid format → 400) ---"
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/screenshot" \
+  "${AUTH_HEADER[@]+"${AUTH_HEADER[@]}"}"  \
+  -H "Content-Type: application/json" \
+  -d '{"html": "<h1>x</h1>", "format": "gif"}')
+assert_eq "HTTP 400 (bad format)" "400" "$HTTP_CODE"
+
+echo ""
+
 # ── POST /pdf/generate with url field ────────────────────────────────────────
 
 echo "--- POST /pdf/generate (url, stream: false) ---"
