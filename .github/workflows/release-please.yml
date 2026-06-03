@@ -9,16 +9,10 @@ permissions:
   contents: write
   pull-requests: write
 
-env:
-  # Node 20 action runtime is deprecated (GitHub forces Node 24 from 2026-06-16).
-  # Opt in now for actions without a Node 24 release yet; remove once they ship one.
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@v5
         with:
           release-type: node
-          package-name: folio
