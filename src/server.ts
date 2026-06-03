@@ -1,4 +1,5 @@
-import Fastify from 'fastify';
+import { STATUS_CODES } from 'node:http';
+import Fastify, { type FastifyError } from 'fastify';
 import { env } from './config/env.js';
 import { authPlugin } from './plugins/auth.js';
 import { s3Plugin } from './plugins/s3.js';
@@ -22,6 +23,23 @@ export async function buildApp() {
           ? { target: 'pino-pretty' }
           : undefined,
     },
+  });
+
+  // Mask 5xx detail (Fastify's default leaks the error message — including
+  // Ghostscript stderr with tmp paths); 4xx client errors keep their message.
+  fastify.setErrorHandler((error: FastifyError, request, reply) => {
+    const statusCode = error.statusCode ?? 500;
+
+    if (statusCode >= 500) {
+      request.log.error({ err: error }, 'Unhandled error');
+      return reply.status(500).send({ statusCode: 500, error: 'Internal Server Error' });
+    }
+
+    return reply.status(statusCode).send({
+      statusCode,
+      error: STATUS_CODES[statusCode] ?? 'Error',
+      message: error.message,
+    });
   });
 
   const pdfService = new PdfService({ ssrfProtection: env.SSRF_PROTECTION });

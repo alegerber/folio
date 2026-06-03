@@ -52,7 +52,7 @@ describe('API key authentication (integration)', () => {
   });
 
   it('returns 401 for requests without x-api-key header', async () => {
-    const response = await app.inject({ method: 'GET', url: '/health' });
+    const response = await app.inject({ method: 'GET', url: '/metrics' });
     expect(response.statusCode).toBe(401);
     expect(response.json()).toEqual({ statusCode: 401, error: 'Unauthorized' });
   });
@@ -60,18 +60,23 @@ describe('API key authentication (integration)', () => {
   it('returns 401 for requests with wrong x-api-key', async () => {
     const response = await app.inject({
       method: 'GET',
-      url: '/health',
+      url: '/metrics',
       headers: { 'x-api-key': 'wrong-key-that-is-at-least-32-characters!' },
     });
     expect(response.statusCode).toBe(401);
   });
 
-  it('allows requests with correct x-api-key', async () => {
+  it('allows a protected route with correct x-api-key', async () => {
     const response = await app.inject({
       method: 'GET',
-      url: '/health',
+      url: '/metrics',
       headers: { 'x-api-key': TEST_API_KEY },
     });
+    expect(response.statusCode).toBe(200);
+  });
+
+  it('allows /health without a key even when auth is enabled', async () => {
+    const response = await app.inject({ method: 'GET', url: '/health' });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ status: 'ok' });
   });
