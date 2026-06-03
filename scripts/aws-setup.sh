@@ -265,7 +265,8 @@ JSON
       "Action": [
         "iam:CreateRole", "iam:DeleteRole", "iam:GetRole", "iam:TagRole",
         "iam:AttachRolePolicy", "iam:DetachRolePolicy",
-        "iam:PutRolePolicy", "iam:DeleteRolePolicy", "iam:GetRolePolicy"
+        "iam:PutRolePolicy", "iam:DeleteRolePolicy", "iam:GetRolePolicy",
+        "iam:ListRolePolicies", "iam:ListAttachedRolePolicies"
       ],
       "Resource": "arn:aws:iam::${AWS_ACCOUNT_ID}:role/folio*"
     },
@@ -301,6 +302,20 @@ JSON
       "Sid": "DescribeLogGroups",
       "Effect": "Allow",
       "Action": "logs:DescribeLogGroups",
+      "Resource": "*"
+    },
+    {
+      "Sid": "AccessLogDelivery",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogDelivery",
+        "logs:GetLogDelivery",
+        "logs:UpdateLogDelivery",
+        "logs:DeleteLogDelivery",
+        "logs:ListLogDeliveries",
+        "logs:PutResourcePolicy",
+        "logs:DescribeResourcePolicies"
+      ],
       "Resource": "*"
     }
   ]
