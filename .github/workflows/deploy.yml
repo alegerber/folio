@@ -8,6 +8,11 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  # Node 20 action runtime is deprecated (GitHub forces Node 24 from 2026-06-16).
+  # Opt in now for actions without a Node 24 release yet (aws-actions/*); remove once they ship one.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   deploy:
     name: SAM Deploy
@@ -17,7 +22,7 @@ jobs:
       stack-name: ${{ steps.env.outputs.stack-name }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Derive environment
         id: env
@@ -70,7 +75,7 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Run smoke test
         run: ./scripts/smoke-test.sh "${{ needs.deploy.outputs.api-url }}"

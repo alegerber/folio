@@ -1,14 +1,21 @@
 import { z } from 'zod';
 
 export const MAX_MERGE_IDS = 20;
+// Bounds expressed with .max()/enum so z.toJSONSchema emits maxLength/maxItems/
+// enum constraints that Fastify's AJV actually enforces at the HTTP layer.
+export const MAX_HTML_LENGTH = 2_000_000;
+export const MAX_CSS_LENGTH = 500_000;
+export const MAX_COOKIES = 50;
+export const MAX_HEADER_VALUE_LENGTH = 8_192;
+export const PAPER_SIZES = ['A4', 'A3', 'Letter', 'Legal', 'Tabloid'] as const;
 
 export const generateRequestSchema = z.object({
-  html: z.string().min(1).optional(),
+  html: z.string().min(1).max(MAX_HTML_LENGTH).optional(),
   url: z.url().optional(),
-  css: z.string().optional(),
+  css: z.string().max(MAX_CSS_LENGTH).optional(),
   paper: z
     .object({
-      size: z.string().optional(),
+      size: z.enum(PAPER_SIZES).optional(),
       orientation: z.enum(['portrait', 'landscape']).optional(),
     })
     .optional(),
@@ -16,28 +23,29 @@ export const generateRequestSchema = z.object({
     .object({
       margin: z
         .object({
-          top: z.string().optional(),
-          right: z.string().optional(),
-          bottom: z.string().optional(),
-          left: z.string().optional(),
+          top: z.string().max(32).optional(),
+          right: z.string().max(32).optional(),
+          bottom: z.string().max(32).optional(),
+          left: z.string().max(32).optional(),
         })
         .optional(),
       scale: z.number().min(0.1).max(2.0).optional(),
       printBackground: z.boolean().optional(),
-      headerTemplate: z.string().optional(),
-      footerTemplate: z.string().optional(),
+      headerTemplate: z.string().max(MAX_CSS_LENGTH).optional(),
+      footerTemplate: z.string().max(MAX_CSS_LENGTH).optional(),
     })
     .optional(),
   cookies: z
     .array(
       z.object({
-        name: z.string(),
-        value: z.string(),
-        domain: z.string(),
+        name: z.string().max(256),
+        value: z.string().max(4_096),
+        domain: z.string().max(253),
       }),
     )
+    .max(MAX_COOKIES)
     .optional(),
-  extraHeaders: z.record(z.string(), z.string()).optional(),
+  extraHeaders: z.record(z.string().max(256), z.string().max(MAX_HEADER_VALUE_LENGTH)).optional(),
   stream: z.boolean().optional().default(false),
 });
 

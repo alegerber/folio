@@ -102,8 +102,10 @@ npm run dev
 All routes can be protected with a static API key passed in the `X-Api-Key` header.
 
 - Set `API_KEY` (minimum 32 characters) to enable authentication.
-- When `API_KEY` is not set, auth is skipped (useful for local dev).
+- When `API_KEY` is not set, auth is skipped (useful for local dev). It is **required when `NODE_ENV=production`**.
+- `GET /health` is always public so load balancers and orchestrators can probe it; every other route — including `/metrics` — requires the key when auth is enabled.
 - Key comparison uses `crypto.timingSafeEqual` to prevent timing attacks.
+- All routes sit behind a per-instance rate limit (`RATE_LIMIT_MAX` per `RATE_LIMIT_WINDOW_MS`).
 
 ```bash
 curl -X POST http://localhost:8080/pdf/generate \
@@ -127,8 +129,12 @@ curl -X POST http://localhost:8080/pdf/generate \
 | `SIGNED_URL_EXPIRY_SECONDS` | no | Presigned URL TTL, default `3600` |
 | `LOG_LEVEL` | no | `trace` `debug` `info` `warn` `error` — default `info` |
 | `PORT` | no | HTTP port for local server, default `8080` |
-| `API_KEY` | recommended in prod | Static API key for request authentication (min 32 chars). Omit to disable auth. |
+| `API_KEY` | yes in prod | Static API key for request authentication (min 32 chars). **Required when `NODE_ENV=production`**; omit only to disable auth for local dev. |
 | `GHOSTSCRIPT_PATH` | no | Path to the `gs` binary. Enables real image compression on `POST /pdf/compress` and activates the `POST /pdf/pdfa` route. |
+| `NODE_ENV` | no | `development` `test` `production` — default `development`. Production enforces `API_KEY` and structured logging. |
+| `SSRF_PROTECTION` | no | Enabled by default; set to `false`/`0`/`no`/`off` to disable the outbound-request guard for URL/HTML rendering. |
+| `RATE_LIMIT_MAX` | no | Max requests per window per instance, default `60`. |
+| `RATE_LIMIT_WINDOW_MS` | no | Rate-limit window in ms, default `60000`. |
 
 See [.env.example](.env.example) for a ready-to-copy template.
 
