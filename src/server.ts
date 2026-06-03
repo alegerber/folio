@@ -50,6 +50,17 @@ export async function buildApp() {
   const opsService = new PdfOperationsService(env.GHOSTSCRIPT_PATH);
   const screenshotService = new ScreenshotService(pdfService);
 
+  // Per-route request metrics for every endpoint (merge/split/compress/pdfa/
+  // screenshot included), keyed by the route pattern to keep label cardinality
+  // bounded; unmatched requests collapse to a single 'unmatched' series.
+  fastify.addHook('onResponse', async (request, reply) => {
+    metricsService.recordHttpRequest(
+      request.routeOptions?.url ?? 'unmatched',
+      reply.elapsedTime,
+      reply.statusCode,
+    );
+  });
+
   await fastify.register(sensiblePlugin);
   // Coarse in-memory rate limit in front of the heavyweight Chromium pipeline.
   // Registered before auth so unauthenticated floods are limited too. Note:

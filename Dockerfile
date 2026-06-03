@@ -2,7 +2,7 @@
 FROM node:24-slim AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY tsconfig.json .
 COPY src/ src/
 RUN npm run build
@@ -33,10 +33,15 @@ RUN dnf install -y \
 
 COPY --from=builder /app/dist ./dist
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Useful for Docker/ECS server mode (ignored by the Lambda runtime). Uses node
+# rather than curl, which is not present in the Lambda base image.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:'+(process.env.PORT||8080)+'/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["dist/lambda.handler"]

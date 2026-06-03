@@ -39,11 +39,24 @@ function formatHistogram(name: string, help: string, histogram: Histogram): stri
   return lines.join('\n');
 }
 
+// Prometheus label values must escape backslash, double-quote and newline.
+function escapeLabel(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+}
+
 export class MetricsService {
   private durationMs = createHistogram(DURATION_BUCKETS_MS);
   private sizeBytes = createHistogram(SIZE_BUCKETS_BYTES);
   private successCount = 0;
   private errorCount = 0;
+
+  // Per-route request metrics covering every endpoint (generate, merge, split,
+  // compress, pdfa, screenshot, …), fed by an onResponse hook. NOTE: like all
+  // counters here these are in-memory and per-instance — on Lambda each warm
+  // instance keeps its own values, so a scrape reflects one instance, not the
+  // whole fleet. Use a push-based exporter (e.g. EMF) for fleet-wide metrics.
+  private httpDurationMs = createHistogram(DURATION_BUCKETS_MS);
+  private httpCounts = new Map<string, { success: number; error: number }>();
 
   recordSuccess(durationMs: number, sizeBytes: number): void {
     recordValue(this.durationMs, durationMs);
@@ -53,6 +66,30 @@ export class MetricsService {
 
   recordError(): void {
     this.errorCount += 1;
+  }
+
+  recordHttpRequest(route: string, durationMs: number, statusCode: number): void {
+    recordValue(this.httpDurationMs, durationMs);
+    const entry = this.httpCounts.get(route) ?? { success: 0, error: 0 };
+    if (statusCode >= 500) {
+      entry.error += 1;
+    } else {
+      entry.success += 1;
+    }
+    this.httpCounts.set(route, entry);
+  }
+
+  private httpCounterLines(): string[] {
+    const lines = [
+      '# HELP http_requests_total Total HTTP requests by route and status',
+      '# TYPE http_requests_total counter',
+    ];
+    for (const [route, { success, error }] of this.httpCounts) {
+      const r = escapeLabel(route);
+      lines.push(`http_requests_total{route="${r}",status="success"} ${success}`);
+      lines.push(`http_requests_total{route="${r}",status="error"} ${error}`);
+    }
+    return lines;
   }
 
   format(): string {
@@ -73,6 +110,14 @@ export class MetricsService {
       '# TYPE pdf_generation_requests_total counter',
       `pdf_generation_requests_total{status="success"} ${this.successCount}`,
       `pdf_generation_requests_total{status="error"} ${this.errorCount}`,
+      '',
+      formatHistogram(
+        'http_request_duration_ms',
+        'Duration of all HTTP requests in milliseconds',
+        this.httpDurationMs,
+      ),
+      '',
+      ...this.httpCounterLines(),
     ].join('\n');
   }
 }

@@ -302,6 +302,10 @@ create_private_bucket() {
       --bucket "$bucket" \
       --public-access-block-configuration \
         "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+    aws s3api put-bucket-encryption \
+      --bucket "$bucket" \
+      --server-side-encryption-configuration \
+        '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"},"BucketKeyEnabled":true}]}'
     success "$label $bucket created"
   elif echo "$err" | grep -q "BucketAlreadyOwnedByYou"; then
     success "$label $bucket already exists"

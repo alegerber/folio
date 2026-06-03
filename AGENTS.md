@@ -29,7 +29,7 @@ src/
   lambda.ts              # Lambda handler — buildApp() called via promise at module level
   config/env.ts          # Zod-parsed process.env, process.exit(1) on missing required vars
   plugins/
-    auth.ts              # API key auth (X-Api-Key header, timing-safe comparison); skipped when API_KEY unset
+    auth.ts              # API key auth (X-Api-Key header, timing-safe comparison); skipped when API_KEY unset; /health always exempt
     s3.ts                # Registers s3 (upload) + s3Public (presigning) as Fastify decorators
     sensible.ts          # @fastify/sensible
   routes/
@@ -48,12 +48,12 @@ src/
     storage/StorageService.ts       # S3 upload (s3 client) + presigned URL (s3Public client)
     metrics/MetricsService.ts       # In-memory histograms + counter; serialises to Prometheus text
   types/
-    index.ts                   # GenerateRequest, PaperOptions, PdfOptions, GenerateResponse
+    index.ts                   # PaperOptions, MarginOptions, PdfOptions, CookieParam, ScreenshotRequest
 ```
 
 ## Authentication
 
-All routes are protected by a static API key when the `API_KEY` environment variable is set (min 32 chars). Clients must pass the key in the `X-Api-Key` request header. Requests without a valid key receive `401 Unauthorized`. When `API_KEY` is unset, auth is skipped (local dev). Comparison uses `crypto.timingSafeEqual` to prevent timing attacks.
+All routes except `GET /health` are protected by a static API key when the `API_KEY` environment variable is set (min 32 chars). Clients must pass the key in the `X-Api-Key` request header. Requests without a valid key receive `401 Unauthorized`. `/health` is always public so load balancers can probe it; `/metrics` requires the key. When `API_KEY` is unset, auth is skipped (local dev) — but it is **required when `NODE_ENV=production`**. Comparison uses `crypto.timingSafeEqual` to prevent timing attacks. All routes also sit behind a per-instance rate limit (`RATE_LIMIT_MAX`/`RATE_LIMIT_WINDOW_MS`).
 
 **Files:** `src/plugins/auth.ts`, `src/plugins/auth.test.ts`, `test/integration/auth.test.ts`
 
@@ -68,7 +68,7 @@ Returns service liveness. Also responds to `HEAD /health`.
 { "status": "ok" }
 ```
 
-Use for load balancer health checks or Lambda function URL probes. Requires `X-Api-Key` when `API_KEY` is set.
+Use for load balancer health checks or Lambda function URL probes. Always public — no `X-Api-Key` required, even when auth is enabled.
 
 **Files:** `src/routes/health/index.ts`, `src/routes/health/handler.ts`
 
@@ -83,8 +83,10 @@ Returns Prometheus text-format metrics (`text/plain; version=0.0.4`).
 | `pdf_generation_duration_ms` | histogram | 100, 250, 500, 1000, 2500, 5000, 10000 ms |
 | `pdf_size_bytes` | histogram | 10 KB, 50 KB, 100 KB, 500 KB, 1 MB, 5 MB, 10 MB |
 | `pdf_generation_requests_total` | counter | labels: `status="success"`, `status="error"` |
+| `http_request_duration_ms` | histogram | same duration buckets, all routes |
+| `http_requests_total` | counter | labels: `route` (pattern), `status` — covers every endpoint |
 
-Metrics are in-memory (reset on restart). `MetricsService` is instantiated in `server.ts`, passed to the PDF route handler (which calls `recordSuccess`/`recordError`), and injected into the metrics route.
+Metrics are in-memory and **per-instance** — on Lambda each warm instance keeps its own counters, so a scrape reflects one instance, not the fleet (use a push exporter like EMF for fleet-wide metrics). `MetricsService` is instantiated in `server.ts`; the PDF generate handler calls `recordSuccess`/`recordError` (duration + size), and an `onResponse` hook calls `recordHttpRequest` for **every** route (generate, merge, split, compress, pdfa, screenshot, …), keyed by the route pattern to bound label cardinality.
 
 **Files:** `src/routes/metrics/index.ts`, `src/services/metrics/MetricsService.ts`
 

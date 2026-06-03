@@ -20,8 +20,12 @@ jobs:
     steps:
       - name: Derive stack name
         id: env
+        env:
+          # Pass the untrusted input via env, not direct ${{ }} interpolation
+          # into the script, to avoid shell injection.
+          BRANCH: ${{ inputs.branch }}
         run: |
-          SUFFIX=$(echo "${{ inputs.branch }}" | sed 's/[^a-zA-Z0-9]/-/g')
+          SUFFIX=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9]/-/g')
           STACK="folio-${SUFFIX}"
           echo "stack-name=${STACK}" >> "$GITHUB_OUTPUT"
           echo "Cleaning up stack=${STACK}"
