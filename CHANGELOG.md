@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.2.0](https://github.com/alegerber/folio/compare/v1.1.0...v1.2.0) (2026-06-03)
+
+
+### Features
+
+* per-route Prometheus metrics (`http_request_duration_ms`, `http_requests_total`) covering every endpoint
+* rate limiting via `@fastify/rate-limit`
+* AWS X-Ray tracing and opt-in API Gateway access logging (`EnableAccessLogs`)
+* graceful shutdown (SIGTERM/SIGINT) so container stops close the browser cleanly
+
+
+### Bug Fixes
+
+* **security:** filter every Chromium request — sub-resources and redirects, not just the top-level URL — and use ipaddr.js for robust private-IP detection (IPv4-mapped IPv6, fd00::/8, 0.0.0.0)
+* **security:** mask 5xx error responses so internals (e.g. Ghostscript stderr) are not leaked
+* **security:** make `/health` public for load-balancer probes; require `API_KEY` when `NODE_ENV=production`; run Ghostscript with `-dSAFER`
+* add timeouts to `page.setContent` and the Ghostscript subprocess; recover from Chromium disconnects
+* enforce request input limits (html/css/cookies sizes) and a `paper.size` enum
+* align `puppeteer-core` 25 with `@sparticuz/chromium` 149 (Chromium 149)
+
+
+### Build System
+
+* pin base-image digests; run CI actions on Node 24; use `npm ci`
+* grant the deploy role permissions for stack deletion and access-log delivery
+
+
 ## [1.1.0](https://github.com/alegerber/folio/compare/v1.0.0...v1.1.0) (2026-04-14)
 
 
