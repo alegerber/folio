@@ -8,11 +8,11 @@ describe('authPlugin', () => {
     let app: FastifyInstance;
 
     beforeAll(async () => {
-      vi.doMock('../config/env.js', () => ({
+      vi.doMock('../../src/config/env.js', () => ({
         env: { API_KEY: TEST_API_KEY },
       }));
 
-      const { authPlugin } = await import('./auth.js');
+      const { authPlugin } = await import('../../src/plugins/auth.js');
 
       app = Fastify({ logger: false });
       await app.register(authPlugin);
@@ -76,11 +76,11 @@ describe('authPlugin', () => {
 
     beforeAll(async () => {
       vi.resetModules();
-      vi.doMock('../config/env.js', () => ({
+      vi.doMock('../../src/config/env.js', () => ({
         env: { API_KEY: undefined },
       }));
 
-      const { authPlugin } = await import('./auth.js');
+      const { authPlugin } = await import('../../src/plugins/auth.js');
 
       app = Fastify({ logger: false });
       await app.register(authPlugin);

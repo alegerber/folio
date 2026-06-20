@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PdfService } from './PdfService.js';
+import { PdfService } from '../../src/services/pdf/PdfService.js';
 
 const mockPdf = vi.fn().mockResolvedValue(Buffer.from('%PDF-1.4 mock'));
 const mockClose = vi.fn().mockResolvedValue(undefined);
