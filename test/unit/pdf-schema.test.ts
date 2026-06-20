@@ -11,7 +11,7 @@ import {
   MAX_CSS_LENGTH,
   MAX_MERGE_IDS,
   MAX_COOKIES,
-} from './schema.js';
+} from '../../src/routes/pdf/schema.js';
 
 const UUID = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 const UUID2 = 'c9bf9e57-1685-4c89-bafb-ff5af830be8a';

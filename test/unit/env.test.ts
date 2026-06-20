@@ -5,12 +5,12 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 // module so its top-level validation passes; afterwards we exercise the
 // exported schema directly with constructed inputs (process.env no longer
 // matters for those assertions).
-let envSchema: typeof import('./env.js').envSchema;
+let envSchema: typeof import('../../src/config/env.js').envSchema;
 
 beforeAll(async () => {
   vi.stubEnv('S3_BUCKET', 'valid-bucket');
   vi.stubEnv('AWS_REGION', 'eu-central-1');
-  ({ envSchema } = await import('./env.js'));
+  ({ envSchema } = await import('../../src/config/env.js'));
 });
 
 afterAll(() => {
@@ -154,7 +154,7 @@ describe('env module — fail-fast on invalid configuration', () => {
       }) as never);
     const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    await expect(import('./env.js')).rejects.toThrow('process.exit:1');
+    await expect(import('../../src/config/env.js')).rejects.toThrow('process.exit:1');
     expect(errorLog).toHaveBeenCalledWith('Invalid environment variables:', expect.anything());
 
     exit.mockRestore();

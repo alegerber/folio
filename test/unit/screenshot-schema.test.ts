@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { screenshotRequestSchema, screenshotRequestJsonSchema } from './schema.js';
+import {
+  screenshotRequestSchema,
+  screenshotRequestJsonSchema,
+} from '../../src/routes/screenshot/schema.js';
 
 describe('screenshotRequestSchema — defaults', () => {
   it('applies png/non-fullPage/non-stream defaults for a minimal request', () => {
