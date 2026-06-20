@@ -5,7 +5,7 @@ import {
   InvalidPageRangeError,
   parsePageRange,
   PdfOperationsService,
-} from './PdfOperationsService.js';
+} from '../../src/services/pdf/PdfOperationsService.js';
 
 vi.mock('child_process', () => ({ spawn: vi.fn() }));
 vi.mock('fs/promises', () => ({

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ScreenshotService } from './ScreenshotService.js';
-import type { PdfService } from '../pdf/PdfService.js';
+import { ScreenshotService } from '../../src/services/screenshot/ScreenshotService.js';
+import type { PdfService } from '../../src/services/pdf/PdfService.js';
 
 const mockScreenshot = vi.fn().mockResolvedValue(Buffer.from('PNG_DATA'));
 const mockPageClose = vi.fn().mockResolvedValue(undefined);

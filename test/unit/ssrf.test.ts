@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { assertSafeUrl, isBlockedIp, isRequestUrlAllowed, SsrfError } from './ssrf.js';
+import { assertSafeUrl, isBlockedIp, isRequestUrlAllowed, SsrfError } from '../../src/utils/ssrf.js';
 
 vi.mock('dns/promises', () => ({
   lookup: vi.fn(),

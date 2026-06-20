@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { StorageService } from './StorageService.js';
+import { StorageService } from '../../src/services/storage/StorageService.js';
 import { S3Client } from '@aws-sdk/client-s3';
 
 // Mock the AWS SDK modules
@@ -17,7 +17,7 @@ vi.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: vi.fn().mockResolvedValue('https://s3.amazonaws.com/test-bucket/pdfs/test.pdf?signed=true'),
 }));
 
-vi.mock('../../config/env.js', () => ({
+vi.mock('../../src/config/env.js', () => ({
   env: {
     S3_BUCKET: 'test-bucket',
     AWS_REGION: 'us-east-1',
